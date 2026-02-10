@@ -35,7 +35,10 @@ class OPSPlanning {
             document.querySelector('.daily-tasks')?.classList.add('hidden');
             document.querySelector('.share-section')?.classList.add('hidden');
             // Optionally adjust the header
-            document.querySelector('.subtitle').textContent = 'Dashboard View';
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) {
+                subtitle.textContent = 'Dashboard View';
+            }
         }
     }
 
