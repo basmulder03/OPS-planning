@@ -241,9 +241,13 @@ class OPSPlanning {
             const assignment = this.getPersonForDate(date);
             const tasks = this.getTasksForDate(dateStr);
             const isToday = dateStr === today;
+            
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const isPastDate = date < todayDate;
 
             const dayCard = document.createElement('div');
-            dayCard.className = `day-card ${isToday ? 'today' : ''}`;
+            dayCard.className = `day-card ${isToday ? 'today' : ''} ${isPastDate ? 'past-date' : ''}`;
             
             let tasksHtml = '';
             if (tasks.length > 0) {
@@ -398,18 +402,25 @@ class OPSPlanning {
         }
 
         tasksList.innerHTML = '';
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
         sortedDates.forEach(dateStr => {
             const tasks = this.dailyTasks[dateStr];
             const date = new Date(dateStr + 'T00:00:00');
+            const isPast = date < today;
             
             tasks.forEach(task => {
                 const item = document.createElement('div');
-                item.className = 'task-item';
+                item.className = `task-item ${isPast ? 'task-past' : ''}`;
+
+                const statusLabel = isPast ? '<span class="task-status task-status-past">Past</span>' : '<span class="task-status task-status-upcoming">Upcoming</span>';
 
                 item.innerHTML = `
                     <div class="task-item-info">
                         <span class="task-date">${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        ${statusLabel}
                         <span class="task-description">📌 ${task.description}</span>
                     </div>
                     <button class="btn btn-small btn-danger" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
