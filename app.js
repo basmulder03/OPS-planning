@@ -203,10 +203,11 @@ class OPSPlanning {
             return { person: 'No pattern set', note: '' };
         }
 
-        // Calculate days since epoch
+        // Calculate weeks since epoch (weekly rotation)
         const epoch = new Date('2024-01-01');
         const daysSinceEpoch = Math.floor((date - epoch) / (1000 * 60 * 60 * 24));
-        const personIndex = daysSinceEpoch % this.pattern.length;
+        const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
+        const personIndex = weeksSinceEpoch % this.pattern.length;
         
         return { person: this.pattern[personIndex], note: '' };
     }
@@ -219,14 +220,34 @@ class OPSPlanning {
         this.renderTasks();
     }
 
+    hasWeekendActivity(dates) {
+        // Check if Saturday (index 5) or Sunday (index 6) have specific assignments or tasks
+        for (let i = 5; i <= 6; i++) {
+            const dateStr = this.formatDate(dates[i]);
+            // Check for specific assignments
+            if (this.specificAssignments[dateStr]) {
+                return true;
+            }
+            // Check for tasks
+            if (this.dailyTasks[dateStr] && this.dailyTasks[dateStr].length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     renderWeek() {
-        const dates = this.getWeekDates(this.currentViewDate);
+        const allDates = this.getWeekDates(this.currentViewDate);
         const weekNumber = this.getWeekNumber(this.currentViewDate);
+        
+        // Determine if we should show only working days (Mon-Fri) or full week
+        const showWeekend = this.hasWeekendActivity(allDates);
+        const dates = showWeekend ? allDates : allDates.slice(0, 5);
         
         // Update week info
         document.getElementById('weekNumber').textContent = `Week ${weekNumber}`;
         const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const endDate = dates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         document.getElementById('weekDates').textContent = `${startDate} - ${endDate}`;
 
         // Render days
