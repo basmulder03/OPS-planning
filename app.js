@@ -1,5 +1,19 @@
 // OPS Planning Application
 
+// Snackbar notification system
+function showSnackbar(message, type = 'info', duration = 3000) {
+    const snackbar = document.getElementById('snackbar');
+    
+    // Set message and type
+    snackbar.textContent = message;
+    snackbar.className = 'snackbar show ' + type;
+    
+    // Auto hide after duration
+    setTimeout(() => {
+        snackbar.className = 'snackbar';
+    }, duration);
+}
+
 // Multi-Select Component for People Selection
 class MultiSelect {
     constructor(container, options = {}) {
@@ -526,7 +540,7 @@ class OPSPlanning {
         selectedDate.setHours(0, 0, 0, 0);
         
         if (selectedDate < today) {
-            alert('Effective date cannot be in the past. Please select today or a future date.');
+            showSnackbar('Effective date cannot be in the past. Please select today or a future date.', 'warning');
             effectiveDate = this.formatDate(today);
             if (dateInput) {
                 dateInput.value = effectiveDate;
@@ -1260,7 +1274,7 @@ class OPSPlanning {
                 endTimeInput && (endTimeInput.value = '');
                 noteInput && (noteInput.value = '');
             } else {
-                alert('Please enter both date and description');
+                showSnackbar('Please enter both date and description', 'warning');
             }
         });
 
@@ -1289,11 +1303,20 @@ class OPSPlanning {
 
         // Share functionality
         document.getElementById('shareBtn').addEventListener('click', () => {
-            const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => {
-                alert('URL copied to clipboard! Share this link with others.');
+            // Build the URL with current data and viewMode
+            const data = {
+                patternHistory: this.patternHistory,
+                dailyTasks: this.dailyTasks
+            };
+            const encoded = btoa(JSON.stringify(data));
+            const url = new URL(window.location.origin + window.location.pathname);
+            url.searchParams.set('data', encoded);
+            url.searchParams.set('viewMode', 'true'); // Default to read-only mode for shared URLs
+            
+            navigator.clipboard.writeText(url.toString()).then(() => {
+                showSnackbar('OPS Planning Schedule URL copied to clipboard! Recipients will open in read-only mode.', 'success');
             }).catch(err => {
-                alert('Failed to copy URL. Please copy it manually from the address bar.');
+                showSnackbar('Failed to copy URL. Please copy it manually from the address bar.', 'error');
             });
         });
 
@@ -1364,10 +1387,10 @@ class OPSPlanning {
                             this.saveToStorage();
                             this.renderAll();
                             this.setupAutocomplete(); // Refresh autocomplete after import
-                            alert('Data imported successfully!');
+                            showSnackbar('Data imported successfully!', 'success');
                         }
                     } catch (err) {
-                        alert('Error importing data. Please check the file format.');
+                        showSnackbar('Error importing data. Please check the file format.', 'error');
                     }
                 };
                 reader.readAsText(file);

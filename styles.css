@@ -871,3 +871,54 @@ footer {
         display: none;
     }
 }
+
+/* Snackbar */
+.snackbar {
+    visibility: hidden;
+    min-width: 300px;
+    max-width: 500px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    text-align: left;
+    border-radius: 8px;
+    padding: 16px 20px;
+    position: fixed;
+    z-index: 2000;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border);
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.snackbar.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+.snackbar.success {
+    border-left: 4px solid var(--success);
+}
+
+.snackbar.error {
+    border-left: 4px solid var(--danger);
+}
+
+.snackbar.warning {
+    border-left: 4px solid var(--warning);
+}
+
+.snackbar.info {
+    border-left: 4px solid var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+    .snackbar {
+        min-width: 90%;
+        max-width: 90%;
+        bottom: 20px;
+    }
+}
