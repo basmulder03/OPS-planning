@@ -538,8 +538,9 @@ class OPSPlanning {
         const allDates = this.getWeekDates(baseDate);
         const weekNumber = this.getWeekNumber(baseDate);
         
-        // Always show all 7 days for calendar view
-        const dates = allDates;
+        // Determine if we should show only working days (Mon-Fri) or full week
+        const showWeekend = this.hasWeekendActivity(allDates);
+        const dates = showWeekend ? allDates : allDates.slice(0, 5);
         
         // Update week info
         const weekNumberElement = document.getElementById(`${weekType}WeekNumber`);
