@@ -198,6 +198,19 @@ input[type="date"]:focus {
     font-style: italic;
 }
 
+.day-card .day-tasks {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.day-card .day-task {
+    font-size: 0.85rem;
+    color: var(--success);
+    margin-top: 3px;
+    padding: 2px 0;
+}
+
 .week-navigation {
     display: flex;
     gap: 10px;
@@ -319,6 +332,46 @@ input[type="date"]:focus {
 .assignment-note {
     color: var(--text-secondary);
     font-style: italic;
+}
+
+/* Daily Tasks */
+.task-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.task-item-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.task-date {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.task-description {
+    font-size: 1.05rem;
+    color: var(--success);
 }
 
 /* Share Section */

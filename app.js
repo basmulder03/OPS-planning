@@ -4,6 +4,7 @@ class OPSPlanning {
     constructor() {
         this.pattern = [];
         this.specificAssignments = {};
+        this.dailyTasks = {}; // New: tasks for specific days
         this.currentViewDate = new Date();
         this.draggedElement = null;
         this.draggedIndex = null;
@@ -26,6 +27,7 @@ class OPSPlanning {
                 const data = JSON.parse(storedData);
                 this.pattern = data.pattern || [];
                 this.specificAssignments = data.specificAssignments || {};
+                this.dailyTasks = data.dailyTasks || {};
             } catch (e) {
                 console.error('Error loading data:', e);
             }
@@ -35,7 +37,8 @@ class OPSPlanning {
     saveToStorage() {
         const data = {
             pattern: this.pattern,
-            specificAssignments: this.specificAssignments
+            specificAssignments: this.specificAssignments,
+            dailyTasks: this.dailyTasks
         };
         localStorage.setItem('opsPlanning', JSON.stringify(data));
         this.updateURL();
@@ -49,6 +52,7 @@ class OPSPlanning {
                 const data = JSON.parse(atob(dataParam));
                 this.pattern = data.pattern || this.pattern;
                 this.specificAssignments = data.specificAssignments || this.specificAssignments;
+                this.dailyTasks = data.dailyTasks || this.dailyTasks;
                 this.saveToStorage();
             } catch (e) {
                 console.error('Error loading from URL:', e);
@@ -59,7 +63,8 @@ class OPSPlanning {
     updateURL() {
         const data = {
             pattern: this.pattern,
-            specificAssignments: this.specificAssignments
+            specificAssignments: this.specificAssignments,
+            dailyTasks: this.dailyTasks
         };
         const encoded = btoa(JSON.stringify(data));
         const url = new URL(window.location);
@@ -121,6 +126,37 @@ class OPSPlanning {
         this.renderWeek();
     }
 
+    // Daily Tasks Management
+    addTask(date, taskDescription) {
+        const dateStr = this.formatDate(date);
+        if (!this.dailyTasks[dateStr]) {
+            this.dailyTasks[dateStr] = [];
+        }
+        this.dailyTasks[dateStr].push({
+            id: Date.now(),
+            description: taskDescription.trim()
+        });
+        this.saveToStorage();
+        this.renderTasks();
+        this.renderWeek();
+    }
+
+    removeTask(dateStr, taskId) {
+        if (this.dailyTasks[dateStr]) {
+            this.dailyTasks[dateStr] = this.dailyTasks[dateStr].filter(task => task.id !== taskId);
+            if (this.dailyTasks[dateStr].length === 0) {
+                delete this.dailyTasks[dateStr];
+            }
+            this.saveToStorage();
+            this.renderTasks();
+            this.renderWeek();
+        }
+    }
+
+    getTasksForDate(dateStr) {
+        return this.dailyTasks[dateStr] || [];
+    }
+
     // Date Utilities
     formatDate(date) {
         const d = new Date(date);
@@ -180,6 +216,7 @@ class OPSPlanning {
         this.renderWeek();
         this.renderPattern();
         this.renderAssignments();
+        this.renderTasks();
     }
 
     renderWeek() {
@@ -202,16 +239,27 @@ class OPSPlanning {
         dates.forEach((date, index) => {
             const dateStr = this.formatDate(date);
             const assignment = this.getPersonForDate(date);
+            const tasks = this.getTasksForDate(dateStr);
             const isToday = dateStr === today;
 
             const dayCard = document.createElement('div');
             dayCard.className = `day-card ${isToday ? 'today' : ''}`;
+            
+            let tasksHtml = '';
+            if (tasks.length > 0) {
+                tasksHtml = '<div class="day-tasks">';
+                tasks.forEach(task => {
+                    tasksHtml += `<div class="day-task">📌 ${task.description}</div>`;
+                });
+                tasksHtml += '</div>';
+            }
             
             dayCard.innerHTML = `
                 <div class="day-name">${dayNames[index]}</div>
                 <div class="day-date">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 <div class="day-person">${assignment.person}</div>
                 ${assignment.note ? `<div class="day-note">${assignment.note}</div>` : ''}
+                ${tasksHtml}
             `;
 
             weekDaysContainer.appendChild(dayCard);
@@ -339,6 +387,50 @@ class OPSPlanning {
         });
     }
 
+    renderTasks() {
+        const tasksList = document.getElementById('tasksList');
+        
+        const sortedDates = Object.keys(this.dailyTasks).sort();
+        
+        if (sortedDates.length === 0) {
+            tasksList.innerHTML = '<div class="empty-state"><p>No extra tasks set. Add tasks for specific days.</p></div>';
+            return;
+        }
+
+        tasksList.innerHTML = '';
+
+        sortedDates.forEach(dateStr => {
+            const tasks = this.dailyTasks[dateStr];
+            const date = new Date(dateStr + 'T00:00:00');
+            
+            tasks.forEach(task => {
+                const item = document.createElement('div');
+                item.className = 'task-item';
+
+                item.innerHTML = `
+                    <div class="task-item-info">
+                        <span class="task-date">${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span class="task-description">📌 ${task.description}</span>
+                    </div>
+                    <button class="btn btn-small btn-danger" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
+                `;
+
+                tasksList.appendChild(item);
+            });
+        });
+
+        // Add event listeners
+        tasksList.querySelectorAll('.btn-danger').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const dateStr = e.target.dataset.date;
+                const taskId = parseInt(e.target.dataset.taskId);
+                if (confirm('Remove this task?')) {
+                    this.removeTask(dateStr, taskId);
+                }
+            });
+        });
+    }
+
     // Event Listeners
     setupEventListeners() {
         // Add person to pattern
@@ -387,6 +479,20 @@ class OPSPlanning {
             }
         });
 
+        // Add daily task
+        document.getElementById('addTaskBtn').addEventListener('click', () => {
+            const dateInput = document.getElementById('taskDate');
+            const taskInput = document.getElementById('taskDescription');
+
+            if (dateInput.value && taskInput.value) {
+                this.addTask(dateInput.value, taskInput.value);
+                dateInput.value = '';
+                taskInput.value = '';
+            } else {
+                alert('Please enter both date and task description');
+            }
+        });
+
         // Share functionality
         document.getElementById('shareBtn').addEventListener('click', () => {
             const url = window.location.href;
@@ -401,7 +507,8 @@ class OPSPlanning {
         document.getElementById('exportBtn').addEventListener('click', () => {
             const data = {
                 pattern: this.pattern,
-                specificAssignments: this.specificAssignments
+                specificAssignments: this.specificAssignments,
+                dailyTasks: this.dailyTasks
             };
             const dataStr = JSON.stringify(data, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
@@ -428,6 +535,7 @@ class OPSPlanning {
                         if (confirm('This will replace your current data. Continue?')) {
                             this.pattern = data.pattern || [];
                             this.specificAssignments = data.specificAssignments || {};
+                            this.dailyTasks = data.dailyTasks || {};
                             this.saveToStorage();
                             this.renderAll();
                             alert('Data imported successfully!');
