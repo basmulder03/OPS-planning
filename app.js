@@ -1289,9 +1289,21 @@ class OPSPlanning {
 
         // Share functionality
         document.getElementById('shareBtn').addEventListener('click', () => {
-            const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => {
-                alert('URL copied to clipboard! Share this link with others.');
+            // Build the URL with current data and viewMode
+            const data = {
+                patternHistory: this.patternHistory,
+                dailyTasks: this.dailyTasks
+            };
+            const encoded = btoa(JSON.stringify(data));
+            const url = new URL(window.location.origin + window.location.pathname);
+            url.searchParams.set('data', encoded);
+            url.searchParams.set('viewMode', 'true'); // Default to read-only mode for shared URLs
+            
+            // Create a formatted URL with readable text
+            const formattedUrl = `OPS Planning Schedule: ${url.toString()}`;
+            
+            navigator.clipboard.writeText(formattedUrl).then(() => {
+                alert('Formatted URL copied to clipboard! Share this link with others.');
             }).catch(err => {
                 alert('Failed to copy URL. Please copy it manually from the address bar.');
             });
