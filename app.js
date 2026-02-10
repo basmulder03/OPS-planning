@@ -802,6 +802,32 @@ class OPSPlanning {
         return weekNo;
     }
 
+    getEarliestEffectiveDate() {
+        // Return the earliest effective date from pattern history
+        if (this.patternHistory.length === 0) {
+            return null;
+        }
+        return this.patternHistory[0].effectiveDate;
+    }
+
+    weekHasValidPattern(weekDates) {
+        // Check if any day in the week has a valid pattern
+        // A week has a valid pattern if at least one day is on or after the earliest effective date
+        const earliestDate = this.getEarliestEffectiveDate();
+        if (!earliestDate) {
+            return false; // No pattern history at all
+        }
+
+        // Check if any day in the week is on or after the earliest effective date
+        for (const date of weekDates) {
+            const dateStr = this.formatDate(date);
+            if (dateStr >= earliestDate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     getPersonForDate(date) {
         const dateStr = this.formatDate(date);
         
@@ -904,6 +930,22 @@ class OPSPlanning {
         baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
         
         const allDates = this.getWeekDates(baseDate);
+        
+        // Check if this week has a valid pattern
+        // If not, hide the week container
+        const weekContainer = document.querySelector(`.week-${weekType === 'current' ? 'current' : weekType === 'prev' ? 'previous' : 'next'}`);
+        if (!this.weekHasValidPattern(allDates)) {
+            if (weekContainer) {
+                weekContainer.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Show the week container if it was previously hidden
+        if (weekContainer) {
+            weekContainer.style.display = '';
+        }
+        
         const weekNumber = this.getWeekNumber(baseDate);
         
         // Determine if we should show only working days (Mon-Fri) or full week
