@@ -9,6 +9,7 @@ class OPSPlanning {
         this.draggedIndex = null;
         this.viewMode = false; // Dashboard view mode
         this.editingTaskId = null; // Track which task is being edited
+        this.dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Day abbreviations for calendar
         
         this.init();
     }
@@ -558,7 +559,6 @@ class OPSPlanning {
         weekDaysContainer.innerHTML = '';
 
         const today = this.formatDate(new Date());
-        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
         dates.forEach((date, index) => {
             const dateStr = this.formatDate(date);
@@ -607,7 +607,7 @@ class OPSPlanning {
             }
             
             dayCard.innerHTML = `
-                <div class="day-name">${dayNames[index]}</div>
+                <div class="day-name">${this.dayNames[index]}</div>
                 <div class="day-date">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 <div class="day-person">${assignment.person}</div>
                 ${assignment.note ? `<div class="day-note">${assignment.note}</div>` : ''}
