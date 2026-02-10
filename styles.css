@@ -250,10 +250,6 @@ input[type="time"]:focus {
     padding-left: 8px;
 }
 
-.day-card:first-child.today {
-    border-left: 3px solid var(--accent-primary);
-}
-
 .day-card:last-child.today {
     border-right: 3px solid var(--accent-primary);
 }
@@ -615,7 +611,7 @@ footer {
 
     header h1 {
         font-size: 1.4rem;
-        padding-right: 100px;
+        padding-right: 100px; /* Reserve space for toggle button in top-right corner */
     }
 
     .toggle-view-btn {
