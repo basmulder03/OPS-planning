@@ -620,9 +620,9 @@ class OPSPlanning {
                 );
                 dateInput.value = '';
                 taskInput.value = '';
-                if (startTimeInput) startTimeInput.value = '';
-                if (minEndTimeInput) minEndTimeInput.value = '';
-                if (maxEndTimeInput) maxEndTimeInput.value = '';
+                startTimeInput && (startTimeInput.value = '');
+                minEndTimeInput && (minEndTimeInput.value = '');
+                maxEndTimeInput && (maxEndTimeInput.value = '');
             } else {
                 alert('Please enter both date and task description');
             }
