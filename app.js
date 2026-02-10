@@ -396,39 +396,48 @@ class OPSPlanning {
             endTime: ''
         };
         
-        let matchCount = 0;
+        let startTimeCount = 0;
+        let endTimeCount = 0;
         let totalStartMinutes = 0;
         let totalEndMinutes = 0;
         
         Object.values(this.dailyTasks).forEach(tasks => {
             tasks.forEach(task => {
-                if (task.description === description && (task.startTime || task.endTime)) {
-                    matchCount++;
-                    if (task.startTime) {
+                if (task.description === description) {
+                    // Validate and process start time
+                    if (task.startTime && /^\d{2}:\d{2}$/.test(task.startTime)) {
                         const [hours, minutes] = task.startTime.split(':').map(Number);
-                        totalStartMinutes += hours * 60 + minutes;
+                        if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                            totalStartMinutes += hours * 60 + minutes;
+                            startTimeCount++;
+                        }
                     }
-                    if (task.endTime) {
+                    // Validate and process end time
+                    if (task.endTime && /^\d{2}:\d{2}$/.test(task.endTime)) {
                         const [hours, minutes] = task.endTime.split(':').map(Number);
-                        totalEndMinutes += hours * 60 + minutes;
+                        if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                            totalEndMinutes += hours * 60 + minutes;
+                            endTimeCount++;
+                        }
                     }
                 }
             });
         });
         
-        if (matchCount > 0) {
-            if (totalStartMinutes > 0) {
-                const avgMinutes = Math.round(totalStartMinutes / matchCount);
-                const hours = Math.floor(avgMinutes / 60);
-                const minutes = avgMinutes % 60;
-                suggestions.startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            }
-            if (totalEndMinutes > 0) {
-                const avgMinutes = Math.round(totalEndMinutes / matchCount);
-                const hours = Math.floor(avgMinutes / 60);
-                const minutes = avgMinutes % 60;
-                suggestions.endTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            }
+        // Calculate average start time
+        if (startTimeCount > 0) {
+            const avgMinutes = Math.round(totalStartMinutes / startTimeCount);
+            const hours = Math.floor(avgMinutes / 60);
+            const minutes = avgMinutes % 60;
+            suggestions.startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+        
+        // Calculate average end time
+        if (endTimeCount > 0) {
+            const avgMinutes = Math.round(totalEndMinutes / endTimeCount);
+            const hours = Math.floor(avgMinutes / 60);
+            const minutes = avgMinutes % 60;
+            suggestions.endTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
         
         return suggestions;
