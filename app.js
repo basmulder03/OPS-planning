@@ -220,14 +220,34 @@ class OPSPlanning {
         this.renderTasks();
     }
 
+    hasWeekendActivity(dates) {
+        // Check if Saturday (index 5) or Sunday (index 6) have specific assignments or tasks
+        for (let i = 5; i <= 6; i++) {
+            const dateStr = this.formatDate(dates[i]);
+            // Check for specific assignments
+            if (this.specificAssignments[dateStr]) {
+                return true;
+            }
+            // Check for tasks
+            if (this.dailyTasks[dateStr] && this.dailyTasks[dateStr].length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     renderWeek() {
-        const dates = this.getWeekDates(this.currentViewDate);
+        const allDates = this.getWeekDates(this.currentViewDate);
         const weekNumber = this.getWeekNumber(this.currentViewDate);
+        
+        // Determine if we should show only working days (Mon-Fri) or full week
+        const showWeekend = this.hasWeekendActivity(allDates);
+        const dates = showWeekend ? allDates : allDates.slice(0, 5);
         
         // Update week info
         document.getElementById('weekNumber').textContent = `Week ${weekNumber}`;
         const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const endDate = dates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         document.getElementById('weekDates').textContent = `${startDate} - ${endDate}`;
 
         // Render days
