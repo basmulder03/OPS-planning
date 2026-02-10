@@ -242,9 +242,10 @@ class OPSPlanning {
             const tasks = this.getTasksForDate(dateStr);
             const isToday = dateStr === today;
             
-            const todayDate = new Date();
-            todayDate.setHours(0, 0, 0, 0);
-            const isPastDate = date < todayDate;
+            // Check if this date is in the past (compare at midnight)
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const isPastDate = date < startOfToday;
 
             const dayCard = document.createElement('div');
             dayCard.className = `day-card ${isToday ? 'today' : ''} ${isPastDate ? 'past-date' : ''}`;
@@ -408,6 +409,7 @@ class OPSPlanning {
 
         sortedDates.forEach(dateStr => {
             const tasks = this.dailyTasks[dateStr];
+            // Parse date string (format: YYYY-MM-DD) and set to midnight for comparison
             const date = new Date(dateStr + 'T00:00:00');
             const isPast = date < today;
             
