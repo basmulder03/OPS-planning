@@ -99,7 +99,7 @@ class OPSPlanning {
                         );
                         if (!exists) {
                             this.dailyTasks[dateStr].push({
-                                id: Date.now() + Math.random(),
+                                id: Date.now() + '-' + Math.random(),
                                 description: assignment.person,
                                 assignee: assignment.person,
                                 note: assignment.note || '',
@@ -145,7 +145,7 @@ class OPSPlanning {
                         );
                         if (!exists) {
                             this.dailyTasks[dateStr].push({
-                                id: Date.now() + Math.random(),
+                                id: Date.now() + '-' + Math.random(),
                                 description: assignment.person,
                                 assignee: assignment.person,
                                 note: assignment.note || '',
@@ -218,7 +218,7 @@ class OPSPlanning {
             this.dailyTasks[dateStr] = [];
         }
         this.dailyTasks[dateStr].push({
-            id: Date.now(),
+            id: Date.now() + '-' + Math.random(),
             description: taskDescription.trim(),
             assignee: assignee.trim(),
             startTime: startTime.trim(),
@@ -671,7 +671,7 @@ class OPSPlanning {
                                         this.dailyTasks[dateStr] = [];
                                     }
                                     this.dailyTasks[dateStr].push({
-                                        id: Date.now() + Math.random(),
+                                        id: Date.now() + '-' + Math.random(),
                                         description: assignment.person,
                                         assignee: assignment.person,
                                         note: assignment.note || '',

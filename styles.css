@@ -325,7 +325,7 @@ input[type="time"]:focus {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    margin-left: 622px;
+    padding-left: 320px;
 }
 
 .field-label {
@@ -333,7 +333,7 @@ input[type="time"]:focus {
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    min-width: 150px;
+    width: 150px;
 }
 
 
