@@ -155,6 +155,139 @@ input[type="time"]:focus {
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
+/* Multi-Select Component */
+.multi-select-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+.multi-select-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    min-height: 42px;
+    cursor: text;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.multi-select-input-wrapper:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.multi-select-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--accent-primary);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    animation: tagFadeIn 0.2s ease;
+}
+
+@keyframes tagFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.multi-select-tag-remove {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+    transition: transform 0.2s ease;
+}
+
+.multi-select-tag-remove:hover {
+    transform: scale(1.2);
+}
+
+.multi-select-input {
+    flex: 1;
+    min-width: 120px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1rem;
+    outline: none;
+    padding: 4px;
+}
+
+.multi-select-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px var(--shadow);
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.multi-select-dropdown-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: var(--text-primary);
+}
+
+.multi-select-dropdown-item:hover,
+.multi-select-dropdown-item.highlighted {
+    background: var(--bg-secondary);
+}
+
+.multi-select-dropdown-item.add-new {
+    color: var(--accent-primary);
+    font-weight: 500;
+    border-top: 1px solid var(--border);
+}
+
+.multi-select-dropdown-item.add-new:hover {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.multi-select-dropdown-empty {
+    padding: 10px 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
+}
+
 /* Calendar View - Three Weeks Display */
 .calendar-view {
     background: var(--bg-secondary);
@@ -360,7 +493,30 @@ input[type="time"]:focus {
 .add-person {
     display: flex;
     gap: 10px;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.add-person .field-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    width: 100%;
+}
+
+.add-person #patternEffectiveDate {
+    flex: 0 0 auto;
+}
+
+.add-person #patternMultiSelect {
+    flex: 1 1 300px;
+    min-width: 250px;
+}
+
+.add-person button {
+    flex: 0 0 auto;
+    align-self: flex-end;
 }
 
 .pattern-list {
@@ -433,6 +589,12 @@ input[type="time"]:focus {
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 10px;
+    align-items: flex-end;
+}
+
+.task-controls #assigneeMultiSelect {
+    flex: 1 1 200px;
+    min-width: 180px;
 }
 
 .time-labels {
