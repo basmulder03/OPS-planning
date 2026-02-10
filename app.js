@@ -9,6 +9,7 @@ class OPSPlanning {
         this.draggedIndex = null;
         this.viewMode = false; // Dashboard view mode
         this.editingTaskId = null; // Track which task is being edited
+        this.dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Day abbreviations for calendar
         
         this.init();
     }
@@ -523,25 +524,42 @@ class OPSPlanning {
     }
 
     renderWeek() {
-        const allDates = this.getWeekDates(this.currentViewDate);
-        const weekNumber = this.getWeekNumber(this.currentViewDate);
+        // Render three weeks: previous, current, and next
+        this.renderSingleWeek('prev', -1);
+        this.renderSingleWeek('current', 0);
+        this.renderSingleWeek('next', 1);
+    }
+
+    renderSingleWeek(weekType, weekOffset) {
+        // Calculate the date for this week
+        const baseDate = new Date(this.currentViewDate);
+        baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
+        
+        const allDates = this.getWeekDates(baseDate);
+        const weekNumber = this.getWeekNumber(baseDate);
         
         // Determine if we should show only working days (Mon-Fri) or full week
         const showWeekend = this.hasWeekendActivity(allDates);
         const dates = showWeekend ? allDates : allDates.slice(0, 5);
         
         // Update week info
-        document.getElementById('weekNumber').textContent = `Week ${weekNumber}`;
-        const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        document.getElementById('weekDates').textContent = `${startDate} - ${endDate}`;
+        const weekNumberElement = document.getElementById(`${weekType}WeekNumber`);
+        const weekDatesElement = document.getElementById(`${weekType}WeekDates`);
+        
+        if (weekNumberElement && weekDatesElement) {
+            weekNumberElement.textContent = `Week ${weekNumber}`;
+            const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            weekDatesElement.textContent = `${startDate} - ${endDate}`;
+        }
 
         // Render days
-        const weekDaysContainer = document.getElementById('weekDays');
+        const weekDaysContainer = document.getElementById(`${weekType}WeekDays`);
+        if (!weekDaysContainer) return;
+        
         weekDaysContainer.innerHTML = '';
 
         const today = this.formatDate(new Date());
-        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         dates.forEach((date, index) => {
             const dateStr = this.formatDate(date);
@@ -590,7 +608,7 @@ class OPSPlanning {
             }
             
             dayCard.innerHTML = `
-                <div class="day-name">${dayNames[index]}</div>
+                <div class="day-name">${this.dayNames[index]}</div>
                 <div class="day-date">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 <div class="day-person">${assignment.person}</div>
                 ${assignment.note ? `<div class="day-note">${assignment.note}</div>` : ''}

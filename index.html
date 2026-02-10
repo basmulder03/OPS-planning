@@ -15,16 +15,37 @@
         </header>
 
         <main>
-            <!-- Current Week Display -->
-            <section class="current-week">
-                <h2>Current Week</h2>
-                <div id="currentWeekDisplay" class="week-display">
-                    <div class="week-info">
-                        <span id="weekNumber"></span>
-                        <span id="weekDates"></span>
+            <!-- Three-Week Calendar Display -->
+            <section class="calendar-view">
+                <h2>Schedule Calendar</h2>
+                
+                <!-- Previous Week (smaller) -->
+                <div class="week-container week-previous">
+                    <div class="week-header">
+                        <span class="week-number" id="prevWeekNumber"></span>
+                        <span class="week-dates" id="prevWeekDates"></span>
                     </div>
-                    <div class="week-days" id="weekDays"></div>
+                    <div class="week-days" id="prevWeekDays"></div>
                 </div>
+                
+                <!-- Current Week (normal size) -->
+                <div class="week-container week-current">
+                    <div class="week-header">
+                        <span class="week-number" id="currentWeekNumber"></span>
+                        <span class="week-dates" id="currentWeekDates"></span>
+                    </div>
+                    <div class="week-days" id="currentWeekDays"></div>
+                </div>
+                
+                <!-- Next Week (smaller) -->
+                <div class="week-container week-next">
+                    <div class="week-header">
+                        <span class="week-number" id="nextWeekNumber"></span>
+                        <span class="week-dates" id="nextWeekDates"></span>
+                    </div>
+                    <div class="week-days" id="nextWeekDays"></div>
+                </div>
+                
                 <div class="week-navigation">
                     <button id="prevWeek" class="btn btn-secondary">← Previous</button>
                     <button id="currentWeek" class="btn btn-primary">Today</button>
