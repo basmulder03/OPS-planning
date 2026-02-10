@@ -114,6 +114,15 @@ section h2 {
     background: #d32f2f;
 }
 
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
 .btn-small {
     padding: 5px 12px;
     font-size: 0.85rem;
@@ -369,6 +378,11 @@ input[type="time"]:focus {
     gap: 15px;
     align-items: center;
     flex-wrap: wrap;
+}
+
+.task-item-actions {
+    display: flex;
+    gap: 8px;
 }
 
 .task-date {

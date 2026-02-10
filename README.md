@@ -2,6 +2,10 @@
 
 A browser-based application for managing weekly operations (OPS) schedules. Everything lives in the browser, URL, and localStorage - no backend required!
 
+## Live Demo
+
+🔗 **[Try it now on GitHub Pages](https://basmulder03.github.io/OPS-planning/)**
+
 ## Features
 
 - 🌙 **Dark Mode UI** - Beautiful dark theme with blue accents
