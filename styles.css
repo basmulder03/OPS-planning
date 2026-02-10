@@ -163,6 +163,7 @@ input[type="time"]:focus {
     margin-bottom: 25px;
     border: 1px solid var(--border);
     box-shadow: 0 4px 6px var(--shadow);
+    position: relative;
 }
 
 .week-container {
@@ -171,17 +172,30 @@ input[type="time"]:focus {
     padding: 15px;
     margin-bottom: 15px;
     transition: all 0.3s ease;
+    position: relative;
 }
 
 .week-current {
     border: 2px solid var(--accent-primary);
     box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+    z-index: 3;
+    margin-top: 60px;
+    margin-bottom: 60px;
 }
 
 .week-previous,
 .week-next {
     opacity: 0.7;
     transform: scale(0.95);
+    z-index: 1;
+}
+
+.week-previous {
+    margin-bottom: -45px;
+}
+
+.week-next {
+    margin-top: -45px;
 }
 
 .week-header {
@@ -655,6 +669,19 @@ footer {
     .week-previous,
     .week-next {
         transform: scale(0.9);
+    }
+
+    .week-previous {
+        margin-bottom: -40px;
+    }
+
+    .week-next {
+        margin-top: -40px;
+    }
+
+    .week-current {
+        margin-top: 50px;
+        margin-bottom: 50px;
     }
 
     .add-person,
