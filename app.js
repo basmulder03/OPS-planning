@@ -517,7 +517,7 @@ class OPSPlanning {
         
         const newPattern = this.patternMultiSelect.getValues();
         const dateInput = document.getElementById('patternEffectiveDate');
-        const effectiveDate = dateInput?.value || this.formatDate(new Date());
+        let effectiveDate = dateInput?.value || this.formatDate(new Date());
         
         // Validate date is not in the past
         const selectedDate = new Date(effectiveDate);
@@ -526,9 +526,11 @@ class OPSPlanning {
         selectedDate.setHours(0, 0, 0, 0);
         
         if (selectedDate < today) {
-            alert('Effective date cannot be in the past. Using today instead.');
-            dateInput.value = this.formatDate(today);
-            return this.updatePatternFromMultiSelect();
+            alert('Effective date cannot be in the past. Please select today or a future date.');
+            effectiveDate = this.formatDate(today);
+            if (dateInput) {
+                dateInput.value = effectiveDate;
+            }
         }
         
         // Add a new pattern entry with the specified effective date
@@ -545,6 +547,12 @@ class OPSPlanning {
         if (dateInput) {
             dateInput.value = this.formatDate(new Date());
         }
+    }
+    
+    // Helper method to parse comma-separated assignee strings into an array
+    parseAssignees(assigneeString) {
+        if (!assigneeString) return [];
+        return assigneeString.split(',').map(a => a.trim()).filter(a => a);
     }
 
     removePerson(index) {
@@ -683,9 +691,8 @@ class OPSPlanning {
             tasks.forEach(task => {
                 if (task.assignee) {
                     // Split by comma in case of multiple assignees
-                    task.assignee.split(',').forEach(name => {
-                        const trimmed = name.trim();
-                        if (trimmed) assignees.add(trimmed);
+                    this.parseAssignees(task.assignee).forEach(name => {
+                        assignees.add(name);
                     });
                 }
             });
@@ -1147,7 +1154,7 @@ class OPSPlanning {
         
         // Set assignee multi-select values
         if (this.assigneeMultiSelect && task.assignee) {
-            const assignees = task.assignee.split(',').map(a => a.trim()).filter(a => a);
+            const assignees = this.parseAssignees(task.assignee);
             this.assigneeMultiSelect.setValues(assignees);
         }
         
