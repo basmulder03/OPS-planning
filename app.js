@@ -203,10 +203,11 @@ class OPSPlanning {
             return { person: 'No pattern set', note: '' };
         }
 
-        // Calculate days since epoch
+        // Calculate weeks since epoch (weekly rotation)
         const epoch = new Date('2024-01-01');
         const daysSinceEpoch = Math.floor((date - epoch) / (1000 * 60 * 60 * 24));
-        const personIndex = daysSinceEpoch % this.pattern.length;
+        const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
+        const personIndex = weeksSinceEpoch % this.pattern.length;
         
         return { person: this.pattern[personIndex], note: '' };
     }
