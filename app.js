@@ -1,5 +1,272 @@
 // OPS Planning Application
 
+// Multi-Select Component for People Selection
+class MultiSelect {
+    constructor(container, options = {}) {
+        this.container = container;
+        this.options = {
+            placeholder: options.placeholder || 'Type to search or add...',
+            getSuggestions: options.getSuggestions || (() => []),
+            onChange: options.onChange || (() => {}),
+            allowMultiple: options.allowMultiple !== false, // Default to true
+            initialValues: options.initialValues || []
+        };
+        
+        this.selectedValues = [...this.options.initialValues];
+        this.inputValue = '';
+        this.highlightedIndex = -1;
+        this.isOpen = false;
+        
+        this.render();
+        this.attachEventListeners();
+    }
+    
+    render() {
+        this.container.innerHTML = '';
+        this.container.className = 'multi-select-container';
+        
+        // Create input wrapper
+        this.inputWrapper = document.createElement('div');
+        this.inputWrapper.className = 'multi-select-input-wrapper';
+        
+        // Render selected values as tags
+        this.selectedValues.forEach((value, index) => {
+            const tag = this.createTag(value, index);
+            this.inputWrapper.appendChild(tag);
+        });
+        
+        // Create input
+        this.input = document.createElement('input');
+        this.input.type = 'text';
+        this.input.className = 'multi-select-input';
+        this.input.placeholder = this.selectedValues.length === 0 ? this.options.placeholder : '';
+        this.input.value = this.inputValue;
+        this.inputWrapper.appendChild(this.input);
+        
+        this.container.appendChild(this.inputWrapper);
+        
+        // Create dropdown (initially hidden)
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'multi-select-dropdown';
+        this.dropdown.style.display = 'none';
+        this.container.appendChild(this.dropdown);
+    }
+    
+    createTag(value, index) {
+        const tag = document.createElement('div');
+        tag.className = 'multi-select-tag';
+        tag.innerHTML = `
+            <span>${this.escapeHtml(value)}</span>
+            <span class="multi-select-tag-remove" data-index="${index}">×</span>
+        `;
+        return tag;
+    }
+    
+    attachEventListeners() {
+        // Input events
+        this.input.addEventListener('input', () => this.handleInput());
+        this.input.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        this.input.addEventListener('focus', () => this.handleFocus());
+        
+        // Wrapper click to focus input
+        this.inputWrapper.addEventListener('click', (e) => {
+            if (e.target !== this.input) {
+                this.input.focus();
+            }
+        });
+        
+        // Tag removal
+        this.inputWrapper.addEventListener('click', (e) => {
+            if (e.target.classList.contains('multi-select-tag-remove')) {
+                const index = parseInt(e.target.dataset.index);
+                this.removeValue(index);
+            }
+        });
+        
+        // Dropdown item selection
+        this.dropdown.addEventListener('click', (e) => {
+            const item = e.target.closest('.multi-select-dropdown-item');
+            if (item && !item.classList.contains('multi-select-dropdown-empty')) {
+                this.selectItem(item.dataset.value, item.classList.contains('add-new'));
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.container.contains(e.target)) {
+                this.closeDropdown();
+            }
+        });
+    }
+    
+    handleInput() {
+        this.inputValue = this.input.value;
+        this.updateDropdown();
+    }
+    
+    handleKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.highlightedIndex >= 0) {
+                const items = this.dropdown.querySelectorAll('.multi-select-dropdown-item:not(.multi-select-dropdown-empty)');
+                if (items[this.highlightedIndex]) {
+                    const value = items[this.highlightedIndex].dataset.value;
+                    const isAddNew = items[this.highlightedIndex].classList.contains('add-new');
+                    this.selectItem(value, isAddNew);
+                }
+            } else if (this.inputValue.trim()) {
+                // Add new value if input is not empty
+                this.addValue(this.inputValue.trim());
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.moveHighlight(1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.moveHighlight(-1);
+        } else if (e.key === 'Escape') {
+            this.closeDropdown();
+        } else if (e.key === 'Backspace' && this.inputValue === '' && this.selectedValues.length > 0) {
+            // Remove last selected value
+            this.removeValue(this.selectedValues.length - 1);
+        } else if (e.key === ',' && this.options.allowMultiple) {
+            // Comma as a separator for adding values
+            e.preventDefault();
+            if (this.inputValue.trim()) {
+                this.addValue(this.inputValue.trim());
+            }
+        }
+    }
+    
+    handleFocus() {
+        this.updateDropdown();
+    }
+    
+    updateDropdown() {
+        const suggestions = this.options.getSuggestions();
+        const searchTerm = this.inputValue.toLowerCase().trim();
+        
+        // Filter suggestions
+        let filtered = suggestions.filter(s => 
+            s.toLowerCase().includes(searchTerm) && 
+            !this.selectedValues.includes(s)
+        );
+        
+        // Build dropdown content
+        let dropdownHtml = '';
+        
+        if (filtered.length > 0) {
+            filtered.forEach(suggestion => {
+                dropdownHtml += `<div class="multi-select-dropdown-item" data-value="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</div>`;
+            });
+        }
+        
+        // Add "Add new" option if input doesn't match exactly
+        if (searchTerm && !suggestions.some(s => s.toLowerCase() === searchTerm)) {
+            dropdownHtml += `<div class="multi-select-dropdown-item add-new" data-value="${this.escapeHtml(searchTerm)}">+ Add "${this.escapeHtml(searchTerm)}"</div>`;
+        }
+        
+        if (!dropdownHtml && searchTerm) {
+            dropdownHtml = '<div class="multi-select-dropdown-empty">No matches found. Press Enter to add.</div>';
+        }
+        
+        this.dropdown.innerHTML = dropdownHtml;
+        
+        if (dropdownHtml) {
+            this.openDropdown();
+        } else {
+            this.closeDropdown();
+        }
+        
+        this.highlightedIndex = -1;
+    }
+    
+    moveHighlight(direction) {
+        const items = this.dropdown.querySelectorAll('.multi-select-dropdown-item:not(.multi-select-dropdown-empty)');
+        if (items.length === 0) return;
+        
+        // Remove current highlight
+        if (this.highlightedIndex >= 0) {
+            items[this.highlightedIndex]?.classList.remove('highlighted');
+        }
+        
+        // Update index
+        this.highlightedIndex += direction;
+        if (this.highlightedIndex < 0) this.highlightedIndex = items.length - 1;
+        if (this.highlightedIndex >= items.length) this.highlightedIndex = 0;
+        
+        // Add new highlight
+        items[this.highlightedIndex]?.classList.add('highlighted');
+        items[this.highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+    }
+    
+    selectItem(value, isAddNew) {
+        if (value) {
+            this.addValue(value);
+        }
+    }
+    
+    addValue(value) {
+        if (!value) return;
+        
+        if (!this.options.allowMultiple) {
+            this.selectedValues = [value];
+        } else if (!this.selectedValues.includes(value)) {
+            this.selectedValues.push(value);
+        }
+        
+        this.inputValue = '';
+        this.render();
+        this.attachEventListeners();
+        this.input.focus();
+        this.closeDropdown();
+        this.options.onChange(this.selectedValues);
+    }
+    
+    removeValue(index) {
+        this.selectedValues.splice(index, 1);
+        this.render();
+        this.attachEventListeners();
+        this.input.focus();
+        this.options.onChange(this.selectedValues);
+    }
+    
+    openDropdown() {
+        this.dropdown.style.display = 'block';
+        this.isOpen = true;
+    }
+    
+    closeDropdown() {
+        this.dropdown.style.display = 'none';
+        this.isOpen = false;
+        this.highlightedIndex = -1;
+    }
+    
+    getValues() {
+        return [...this.selectedValues];
+    }
+    
+    setValues(values) {
+        this.selectedValues = [...values];
+        this.render();
+        this.attachEventListeners();
+    }
+    
+    clear() {
+        this.selectedValues = [];
+        this.inputValue = '';
+        this.render();
+        this.attachEventListeners();
+        this.options.onChange(this.selectedValues);
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
 class OPSPlanning {
     constructor() {
         this.patternHistory = []; // Array of {effectiveDate: 'YYYY-MM-DD', pattern: [names]}
@@ -10,6 +277,8 @@ class OPSPlanning {
         this.viewMode = false; // Dashboard view mode
         this.editingTaskId = null; // Track which task is being edited
         this.dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Day abbreviations for calendar
+        this.patternMultiSelect = null; // Multi-select for pattern
+        this.assigneeMultiSelect = null; // Multi-select for assignee
         
         this.init();
     }
@@ -242,6 +511,49 @@ class OPSPlanning {
         this.renderPattern();
         this.renderWeek();
     }
+    
+    updatePatternFromMultiSelect() {
+        if (!this.patternMultiSelect) return;
+        
+        const newPattern = this.patternMultiSelect.getValues();
+        const dateInput = document.getElementById('patternEffectiveDate');
+        let effectiveDate = dateInput?.value || this.formatDate(new Date());
+        
+        // Validate date is not in the past
+        const selectedDate = new Date(effectiveDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+            alert('Effective date cannot be in the past. Please select today or a future date.');
+            effectiveDate = this.formatDate(today);
+            if (dateInput) {
+                dateInput.value = effectiveDate;
+            }
+        }
+        
+        // Add a new pattern entry with the specified effective date
+        this.patternHistory.push({
+            effectiveDate: effectiveDate,
+            pattern: newPattern
+        });
+        
+        this.saveToStorage();
+        this.renderPattern();
+        this.renderWeek();
+        
+        // Reset the date to today for next change
+        if (dateInput) {
+            dateInput.value = this.formatDate(new Date());
+        }
+    }
+    
+    // Helper method to parse comma-separated assignee strings into an array
+    parseAssignees(assigneeString) {
+        if (!assigneeString) return [];
+        return assigneeString.split(',').map(a => a.trim()).filter(a => a);
+    }
 
     removePerson(index) {
         const currentPattern = this.getCurrentPattern();
@@ -379,9 +691,8 @@ class OPSPlanning {
             tasks.forEach(task => {
                 if (task.assignee) {
                     // Split by comma in case of multiple assignees
-                    task.assignee.split(',').forEach(name => {
-                        const trimmed = name.trim();
-                        if (trimmed) assignees.add(trimmed);
+                    this.parseAssignees(task.assignee).forEach(name => {
+                        assignees.add(name);
                     });
                 }
             });
@@ -506,9 +817,52 @@ class OPSPlanning {
 
     // Rendering
     renderAll() {
+        this.setupMultiSelects();
         this.renderWeek();
         this.renderPattern();
         this.renderTasks();
+        this.setDefaultEffectiveDate();
+    }
+    
+    setupMultiSelects() {
+        // Initialize pattern multi-select
+        const patternContainer = document.getElementById('patternMultiSelect');
+        if (patternContainer && !this.patternMultiSelect) {
+            this.patternMultiSelect = new MultiSelect(patternContainer, {
+                placeholder: 'Add people to pattern...',
+                getSuggestions: () => this.getUniqueAssignees(),
+                onChange: (values) => {
+                    // Values will be applied when button is clicked
+                },
+                allowMultiple: true,
+                initialValues: this.getCurrentPattern()
+            });
+        } else if (this.patternMultiSelect) {
+            // Update values if already initialized
+            this.patternMultiSelect.setValues(this.getCurrentPattern());
+        }
+        
+        // Initialize assignee multi-select
+        const assigneeContainer = document.getElementById('assigneeMultiSelect');
+        if (assigneeContainer && !this.assigneeMultiSelect) {
+            this.assigneeMultiSelect = new MultiSelect(assigneeContainer, {
+                placeholder: 'Assign to people (optional)...',
+                getSuggestions: () => this.getUniqueAssignees(),
+                onChange: (values) => {
+                    // Values will be read when task is added
+                },
+                allowMultiple: true,
+                initialValues: []
+            });
+        }
+    }
+    
+    setDefaultEffectiveDate() {
+        // Set the effective date to today by default
+        const dateInput = document.getElementById('patternEffectiveDate');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = this.formatDate(new Date());
+        }
     }
 
     hasWeekendActivity(dates) {
@@ -797,7 +1151,13 @@ class OPSPlanning {
         // Populate form fields
         document.getElementById('taskDate').value = dateStr;
         document.getElementById('taskDescription').value = task.description;
-        document.getElementById('taskAssignee').value = task.assignee || '';
+        
+        // Set assignee multi-select values
+        if (this.assigneeMultiSelect && task.assignee) {
+            const assignees = this.parseAssignees(task.assignee);
+            this.assigneeMultiSelect.setValues(assignees);
+        }
+        
         document.getElementById('taskStartTime').value = task.startTime || '';
         document.getElementById('taskEndTime').value = task.endTime || '';
         document.getElementById('taskNote').value = task.note || '';
@@ -826,7 +1186,9 @@ class OPSPlanning {
         // Clear form
         document.getElementById('taskDate').value = '';
         document.getElementById('taskDescription').value = '';
-        document.getElementById('taskAssignee').value = '';
+        if (this.assigneeMultiSelect) {
+            this.assigneeMultiSelect.clear();
+        }
         document.getElementById('taskStartTime').value = '';
         document.getElementById('taskEndTime').value = '';
         document.getElementById('taskNote').value = '';
@@ -834,18 +1196,9 @@ class OPSPlanning {
 
     // Event Listeners
     setupEventListeners() {
-        // Add person to pattern
+        // Update pattern from multi-select
         document.getElementById('addPersonBtn').addEventListener('click', () => {
-            const input = document.getElementById('newPersonName');
-            this.addPerson(input.value);
-            input.value = '';
-        });
-
-        document.getElementById('newPersonName').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.addPerson(e.target.value);
-                e.target.value = '';
-            }
+            this.updatePatternFromMultiSelect();
         });
 
         // Week navigation
@@ -868,19 +1221,21 @@ class OPSPlanning {
         document.getElementById('addTaskBtn').addEventListener('click', () => {
             const dateInput = document.getElementById('taskDate');
             const descriptionInput = document.getElementById('taskDescription');
-            const assigneeInput = document.getElementById('taskAssignee');
             const startTimeInput = document.getElementById('taskStartTime');
             const endTimeInput = document.getElementById('taskEndTime');
             const noteInput = document.getElementById('taskNote');
 
             if (dateInput.value && descriptionInput.value) {
+                // Get assignees from multi-select
+                const assignees = this.assigneeMultiSelect ? this.assigneeMultiSelect.getValues().join(', ') : '';
+                
                 // Check if we're editing or adding
                 if (this.editingTaskId) {
                     this.updateTask(
                         this.editingTaskDate,
                         this.editingTaskId,
                         descriptionInput.value,
-                        assigneeInput?.value || '',
+                        assignees,
                         startTimeInput?.value || '',
                         endTimeInput?.value || '',
                         noteInput?.value || ''
@@ -890,7 +1245,7 @@ class OPSPlanning {
                     this.addTask(
                         dateInput.value, 
                         descriptionInput.value,
-                        assigneeInput?.value || '',
+                        assignees,
                         startTimeInput?.value || '',
                         endTimeInput?.value || '',
                         noteInput?.value || ''
@@ -898,7 +1253,9 @@ class OPSPlanning {
                 }
                 dateInput.value = '';
                 descriptionInput.value = '';
-                assigneeInput && (assigneeInput.value = '');
+                if (this.assigneeMultiSelect) {
+                    this.assigneeMultiSelect.clear();
+                }
                 startTimeInput && (startTimeInput.value = '');
                 endTimeInput && (endTimeInput.value = '');
                 noteInput && (noteInput.value = '');
@@ -1019,7 +1376,7 @@ class OPSPlanning {
     }
 
     setupAutocomplete() {
-        // Get or create datalist elements
+        // Keep description autocomplete
         let descriptionDatalist = document.getElementById('taskDescriptionList');
         if (!descriptionDatalist) {
             descriptionDatalist = document.createElement('datalist');
@@ -1027,39 +1384,19 @@ class OPSPlanning {
             document.body.appendChild(descriptionDatalist);
         }
         
-        let assigneeDatalist = document.getElementById('taskAssigneeList');
-        if (!assigneeDatalist) {
-            assigneeDatalist = document.createElement('datalist');
-            assigneeDatalist.id = 'taskAssigneeList';
-            document.body.appendChild(assigneeDatalist);
-        }
-        
-        // Link inputs to datalists
+        // Link input to datalist
         const descriptionInput = document.getElementById('taskDescription');
-        const assigneeInput = document.getElementById('taskAssignee');
-        
         if (descriptionInput) {
             descriptionInput.setAttribute('list', 'taskDescriptionList');
         }
-        if (assigneeInput) {
-            assigneeInput.setAttribute('list', 'taskAssigneeList');
-        }
         
-        // Populate datalists
+        // Populate datalist
         const descriptions = this.getUniqueDescriptions();
         descriptionDatalist.innerHTML = '';
         descriptions.forEach(desc => {
             const option = document.createElement('option');
             option.value = desc;
             descriptionDatalist.appendChild(option);
-        });
-        
-        const assignees = this.getUniqueAssignees();
-        assigneeDatalist.innerHTML = '';
-        assignees.forEach(assignee => {
-            const option = document.createElement('option');
-            option.value = assignee;
-            assigneeDatalist.appendChild(option);
         });
     }
 }

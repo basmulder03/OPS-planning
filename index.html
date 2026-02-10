@@ -62,8 +62,10 @@
                 
                 <div class="pattern-controls">
                     <div class="add-person">
-                        <input type="text" id="newPersonName" placeholder="Enter person name" />
-                        <button id="addPersonBtn" class="btn btn-primary">Add to Pattern</button>
+                        <label for="patternEffectiveDate" class="field-label">Effective From:</label>
+                        <input type="date" id="patternEffectiveDate" title="Date when the pattern change becomes effective" />
+                        <div id="patternMultiSelect"></div>
+                        <button id="addPersonBtn" class="btn btn-primary">Update Pattern</button>
                     </div>
                 </div>
 
@@ -77,7 +79,7 @@
                 <div class="task-controls">
                     <input type="date" id="taskDate" placeholder="Date" title="Date for the task or assignment" />
                     <input type="text" id="taskDescription" placeholder="Task or assignment description" title="Description of the task or who is assigned" />
-                    <input type="text" id="taskAssignee" placeholder="Assignee (optional)" title="Person assigned to this task" />
+                    <div id="assigneeMultiSelect"></div>
                     <input type="time" id="taskStartTime" title="Start time for the task (optional)" />
                     <input type="time" id="taskEndTime" title="End time for the task (optional)" />
                     <input type="text" id="taskNote" placeholder="Note (optional)" title="Additional notes" />
