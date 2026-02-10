@@ -39,6 +39,7 @@ header {
     padding: 30px 0;
     border-bottom: 2px solid var(--border);
     margin-bottom: 30px;
+    position: relative;
 }
 
 header h1 {
@@ -49,6 +50,10 @@ header h1 {
 .subtitle {
     color: var(--text-secondary);
     font-size: 1.1rem;
+}
+
+.toggle-view-btn {
+    margin-top: 15px;
 }
 
 /* Sections */

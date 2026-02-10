@@ -39,7 +39,45 @@ class OPSPlanning {
             if (subtitle) {
                 subtitle.textContent = 'Dashboard View';
             }
+        } else {
+            // Ensure sections are visible in normal mode
+            document.querySelector('.pattern-section')?.classList.remove('hidden');
+            document.querySelector('.specific-assignments')?.classList.remove('hidden');
+            document.querySelector('.daily-tasks')?.classList.remove('hidden');
+            document.querySelector('.share-section')?.classList.remove('hidden');
+            // Restore original subtitle
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) {
+                subtitle.textContent = 'Weekly Operations Schedule';
+            }
         }
+        // Update toggle button text
+        this.updateViewModeButton();
+    }
+
+    toggleViewMode() {
+        this.viewMode = !this.viewMode;
+        this.applyViewMode();
+        this.updateURLViewMode();
+    }
+
+    updateViewModeButton() {
+        const button = document.getElementById('toggleViewMode');
+        if (button) {
+            button.textContent = this.viewMode ? '✏️ Edit Mode' : '👁️ View Mode';
+            button.title = this.viewMode ? 'Switch to edit mode' : 'Switch to view-only dashboard';
+        }
+    }
+
+    updateURLViewMode() {
+        const url = new URL(window.location);
+        if (this.viewMode) {
+            url.searchParams.set('viewMode', 'true');
+        } else {
+            url.searchParams.delete('viewMode');
+            url.searchParams.delete('view');
+        }
+        window.history.replaceState({}, '', url);
     }
 
     // Data Management
@@ -598,6 +636,11 @@ class OPSPlanning {
             }).catch(err => {
                 alert('Failed to copy URL. Please copy it manually from the address bar.');
             });
+        });
+
+        // Toggle view mode
+        document.getElementById('toggleViewMode').addEventListener('click', () => {
+            this.toggleViewMode();
         });
 
         // Export data
