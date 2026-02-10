@@ -802,6 +802,39 @@ class OPSPlanning {
         return weekNo;
     }
 
+    getEarliestEffectiveDate() {
+        // Return the earliest effective date from pattern history
+        if (this.patternHistory.length === 0) {
+            return null;
+        }
+        // Find the minimum effective date in case pattern history is not sorted
+        let earliest = this.patternHistory[0].effectiveDate;
+        for (let i = 1; i < this.patternHistory.length; i++) {
+            if (this.patternHistory[i].effectiveDate < earliest) {
+                earliest = this.patternHistory[i].effectiveDate;
+            }
+        }
+        return earliest;
+    }
+
+    weekHasValidPattern(weekDates) {
+        // Check if any day in the week has a valid pattern
+        // A week has a valid pattern if at least one day is on or after the earliest effective date
+        const earliestDate = this.getEarliestEffectiveDate();
+        if (!earliestDate) {
+            return false; // No pattern history at all
+        }
+
+        // Check if any day in the week is on or after the earliest effective date
+        for (const date of weekDates) {
+            const dateStr = this.formatDate(date);
+            if (dateStr >= earliestDate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     getPersonForDate(date) {
         const dateStr = this.formatDate(date);
         
@@ -898,12 +931,39 @@ class OPSPlanning {
         this.renderSingleWeek('next', 1);
     }
 
+    getWeekContainerClass(weekType) {
+        // Map weekType to the CSS class name
+        const classMap = {
+            'prev': 'week-previous',
+            'current': 'week-current',
+            'next': 'week-next'
+        };
+        return classMap[weekType] || 'week-current';
+    }
+
     renderSingleWeek(weekType, weekOffset) {
         // Calculate the date for this week
         const baseDate = new Date(this.currentViewDate);
         baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
         
         const allDates = this.getWeekDates(baseDate);
+        
+        // Check if this week has a valid pattern
+        // If not, hide the week container
+        const weekContainerClass = this.getWeekContainerClass(weekType);
+        const weekContainer = document.querySelector(`.${weekContainerClass}`);
+        if (!this.weekHasValidPattern(allDates)) {
+            if (weekContainer) {
+                weekContainer.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Show the week container if it was previously hidden
+        if (weekContainer) {
+            weekContainer.style.display = '';
+        }
+        
         const weekNumber = this.getWeekNumber(baseDate);
         
         // Determine if we should show only working days (Mon-Fri) or full week
