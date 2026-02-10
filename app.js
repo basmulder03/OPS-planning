@@ -8,15 +8,76 @@ class OPSPlanning {
         this.currentViewDate = new Date();
         this.draggedElement = null;
         this.draggedIndex = null;
+        this.viewMode = false; // Dashboard view mode
         
         this.init();
     }
 
     init() {
+        this.checkViewMode();
         this.loadFromStorage();
         this.loadFromURL();
         this.setupEventListeners();
         this.renderAll();
+        this.applyViewMode();
+    }
+
+    checkViewMode() {
+        const params = new URLSearchParams(window.location.search);
+        this.viewMode = params.get('viewMode') === 'true' || params.get('view') === 'dashboard';
+    }
+
+    applyViewMode() {
+        if (this.viewMode) {
+            // Hide editing sections in view mode
+            document.querySelector('.pattern-section')?.classList.add('hidden');
+            document.querySelector('.specific-assignments')?.classList.add('hidden');
+            document.querySelector('.daily-tasks')?.classList.add('hidden');
+            document.querySelector('.share-section')?.classList.add('hidden');
+            // Optionally adjust the header
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) {
+                subtitle.textContent = 'Dashboard View';
+            }
+        } else {
+            // Ensure sections are visible in normal mode
+            document.querySelector('.pattern-section')?.classList.remove('hidden');
+            document.querySelector('.specific-assignments')?.classList.remove('hidden');
+            document.querySelector('.daily-tasks')?.classList.remove('hidden');
+            document.querySelector('.share-section')?.classList.remove('hidden');
+            // Restore original subtitle
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) {
+                subtitle.textContent = 'Weekly Operations Schedule';
+            }
+        }
+        // Update toggle button text
+        this.updateViewModeButton();
+    }
+
+    toggleViewMode() {
+        this.viewMode = !this.viewMode;
+        this.applyViewMode();
+        this.updateURLViewMode();
+    }
+
+    updateViewModeButton() {
+        const button = document.getElementById('toggleViewMode');
+        if (button) {
+            button.textContent = this.viewMode ? '✏️ Edit Mode' : '👁️ View Mode';
+            button.title = this.viewMode ? 'Switch to edit mode' : 'Switch to view-only dashboard';
+        }
+    }
+
+    updateURLViewMode() {
+        const url = new URL(window.location);
+        if (this.viewMode) {
+            url.searchParams.set('viewMode', 'true');
+        } else {
+            url.searchParams.delete('viewMode');
+            url.searchParams.delete('view');
+        }
+        window.history.replaceState({}, '', url);
     }
 
     // Data Management
@@ -127,14 +188,17 @@ class OPSPlanning {
     }
 
     // Daily Tasks Management
-    addTask(date, taskDescription) {
+    addTask(date, taskDescription, startTime = '', minEndTime = '', maxEndTime = '') {
         const dateStr = this.formatDate(date);
         if (!this.dailyTasks[dateStr]) {
             this.dailyTasks[dateStr] = [];
         }
         this.dailyTasks[dateStr].push({
             id: Date.now(),
-            description: taskDescription.trim()
+            description: taskDescription.trim(),
+            startTime: startTime.trim(),
+            minEndTime: minEndTime.trim(),
+            maxEndTime: maxEndTime.trim()
         });
         this.saveToStorage();
         this.renderTasks();
@@ -275,7 +339,15 @@ class OPSPlanning {
             if (tasks.length > 0) {
                 tasksHtml = '<div class="day-tasks">';
                 tasks.forEach(task => {
-                    tasksHtml += `<div class="day-task">📌 ${task.description}</div>`;
+                    let timeInfo = '';
+                    if (task.startTime || task.minEndTime || task.maxEndTime) {
+                        const timeParts = [];
+                        if (task.startTime) timeParts.push(task.startTime);
+                        if (task.minEndTime) timeParts.push(`min:${task.minEndTime}`);
+                        if (task.maxEndTime) timeParts.push(`max:${task.maxEndTime}`);
+                        timeInfo = ` (${timeParts.join(' ')})`;
+                    }
+                    tasksHtml += `<div class="day-task">📌 ${task.description}${timeInfo}</div>`;
                 });
                 tasksHtml += '</div>';
             }
@@ -440,11 +512,28 @@ class OPSPlanning {
 
                 const statusLabel = isPast ? '<span class="task-status task-status-past">Past</span>' : '<span class="task-status task-status-upcoming">Upcoming</span>';
 
+                // Build time display
+                let timeDisplay = '';
+                if (task.startTime || task.minEndTime || task.maxEndTime) {
+                    const timeParts = [];
+                    if (task.startTime) {
+                        timeParts.push(`Start: ${task.startTime}`);
+                    }
+                    if (task.minEndTime) {
+                        timeParts.push(`Min end: ${task.minEndTime}`);
+                    }
+                    if (task.maxEndTime) {
+                        timeParts.push(`Max end: ${task.maxEndTime}`);
+                    }
+                    timeDisplay = `<span class="task-time">${timeParts.join(' • ')}</span>`;
+                }
+
                 item.innerHTML = `
                     <div class="task-item-info">
                         <span class="task-date">${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         ${statusLabel}
                         <span class="task-description">📌 ${task.description}</span>
+                        ${timeDisplay}
                     </div>
                     <button class="btn btn-small btn-danger" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
                 `;
@@ -517,11 +606,23 @@ class OPSPlanning {
         document.getElementById('addTaskBtn').addEventListener('click', () => {
             const dateInput = document.getElementById('taskDate');
             const taskInput = document.getElementById('taskDescription');
+            const startTimeInput = document.getElementById('taskStartTime');
+            const minEndTimeInput = document.getElementById('taskMinEndTime');
+            const maxEndTimeInput = document.getElementById('taskMaxEndTime');
 
             if (dateInput.value && taskInput.value) {
-                this.addTask(dateInput.value, taskInput.value);
+                this.addTask(
+                    dateInput.value, 
+                    taskInput.value,
+                    startTimeInput?.value || '',
+                    minEndTimeInput?.value || '',
+                    maxEndTimeInput?.value || ''
+                );
                 dateInput.value = '';
                 taskInput.value = '';
+                startTimeInput && (startTimeInput.value = '');
+                minEndTimeInput && (minEndTimeInput.value = '');
+                maxEndTimeInput && (maxEndTimeInput.value = '');
             } else {
                 alert('Please enter both date and task description');
             }
@@ -535,6 +636,11 @@ class OPSPlanning {
             }).catch(err => {
                 alert('Failed to copy URL. Please copy it manually from the address bar.');
             });
+        });
+
+        // Toggle view mode
+        document.getElementById('toggleViewMode').addEventListener('click', () => {
+            this.toggleViewMode();
         });
 
         // Export data

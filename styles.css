@@ -39,6 +39,7 @@ header {
     padding: 30px 0;
     border-bottom: 2px solid var(--border);
     margin-bottom: 30px;
+    position: relative;
 }
 
 header h1 {
@@ -49,6 +50,10 @@ header h1 {
 .subtitle {
     color: var(--text-secondary);
     font-size: 1.1rem;
+}
+
+.toggle-view-btn {
+    margin-top: 15px;
 }
 
 /* Sections */
@@ -116,7 +121,8 @@ section h2 {
 
 /* Inputs */
 input[type="text"],
-input[type="date"] {
+input[type="date"],
+input[type="time"] {
     padding: 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -128,7 +134,8 @@ input[type="date"] {
 }
 
 input[type="text"]:focus,
-input[type="date"]:focus {
+input[type="date"]:focus,
+input[type="time"]:focus {
     outline: none;
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
@@ -413,6 +420,17 @@ input[type="date"]:focus {
     color: var(--success);
 }
 
+.task-time {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* View Mode - Hide editing sections */
+.hidden {
+    display: none !important;
+}
+
 /* Share Section */
 .share-section {
     display: flex;
@@ -504,12 +522,14 @@ footer {
     }
 
     .add-person,
-    .assignment-controls {
+    .assignment-controls,
+    .task-controls {
         flex-direction: column;
     }
 
     input[type="text"],
-    input[type="date"] {
+    input[type="date"],
+    input[type="time"] {
         max-width: 100%;
     }
 
