@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPS Planning</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗓️ OPS Planning</h1>
+            <p class="subtitle">Weekly Operations Schedule</p>
+        </header>
+
+        <main>
+            <!-- Current Week Display -->
+            <section class="current-week">
+                <h2>Current Week</h2>
+                <div id="currentWeekDisplay" class="week-display">
+                    <div class="week-info">
+                        <span id="weekNumber"></span>
+                        <span id="weekDates"></span>
+                    </div>
+                    <div class="week-days" id="weekDays"></div>
+                </div>
+                <div class="week-navigation">
+                    <button id="prevWeek" class="btn btn-secondary">← Previous</button>
+                    <button id="currentWeek" class="btn btn-primary">Today</button>
+                    <button id="nextWeek" class="btn btn-secondary">Next →</button>
+                </div>
+            </section>
+
+            <!-- Pattern Management -->
+            <section class="pattern-section">
+                <h2>Schedule Pattern</h2>
+                <div class="pattern-info">
+                    <p>Define the repeating pattern for OPS assignments</p>
+                </div>
+                
+                <div class="pattern-controls">
+                    <div class="add-person">
+                        <input type="text" id="newPersonName" placeholder="Enter person name" />
+                        <button id="addPersonBtn" class="btn btn-primary">Add to Pattern</button>
+                    </div>
+                </div>
+
+                <div id="patternList" class="pattern-list"></div>
+            </section>
+
+            <!-- Specific Day Assignments -->
+            <section class="specific-assignments">
+                <h2>Specific Day Assignments</h2>
+                <div class="assignment-controls">
+                    <input type="date" id="assignmentDate" />
+                    <input type="text" id="assignmentPerson" placeholder="Person name" />
+                    <input type="text" id="assignmentNote" placeholder="Note (optional)" />
+                    <button id="addAssignmentBtn" class="btn btn-primary">Add Assignment</button>
+                </div>
+                <div id="assignmentsList" class="assignments-list"></div>
+            </section>
+
+            <!-- Daily Tasks -->
+            <section class="daily-tasks">
+                <h2>Extra Tasks for Specific Days</h2>
+                <div class="task-controls">
+                    <input type="date" id="taskDate" />
+                    <input type="text" id="taskDescription" placeholder="Task description" />
+                    <button id="addTaskBtn" class="btn btn-primary">Add Task</button>
+                </div>
+                <div id="tasksList" class="tasks-list"></div>
+            </section>
+
+            <!-- Share/Export -->
+            <section class="share-section">
+                <h2>Share Schedule</h2>
+                <button id="shareBtn" class="btn btn-secondary">Copy URL to Share</button>
+                <button id="exportBtn" class="btn btn-secondary">Export Data</button>
+                <button id="importBtn" class="btn btn-secondary">Import Data</button>
+                <input type="file" id="importFile" style="display: none;" accept=".json" />
+            </section>
+        </main>
+
+        <footer>
+            <p>All data is stored locally in your browser</p>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="swapModal" class="modal">
+        <div class="modal-content">
+            <h3>Swap Positions</h3>
+            <p id="swapModalText"></p>
+            <div class="modal-actions">
+                <button id="confirmSwap" class="btn btn-primary">Confirm</button>
+                <button id="cancelSwap" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
