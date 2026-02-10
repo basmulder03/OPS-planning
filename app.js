@@ -523,25 +523,42 @@ class OPSPlanning {
     }
 
     renderWeek() {
-        const allDates = this.getWeekDates(this.currentViewDate);
-        const weekNumber = this.getWeekNumber(this.currentViewDate);
+        // Render three weeks: previous, current, and next
+        this.renderSingleWeek('prev', -1);
+        this.renderSingleWeek('current', 0);
+        this.renderSingleWeek('next', 1);
+    }
+
+    renderSingleWeek(weekType, weekOffset) {
+        // Calculate the date for this week
+        const baseDate = new Date(this.currentViewDate);
+        baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
         
-        // Determine if we should show only working days (Mon-Fri) or full week
-        const showWeekend = this.hasWeekendActivity(allDates);
-        const dates = showWeekend ? allDates : allDates.slice(0, 5);
+        const allDates = this.getWeekDates(baseDate);
+        const weekNumber = this.getWeekNumber(baseDate);
+        
+        // Always show all 7 days for calendar view
+        const dates = allDates;
         
         // Update week info
-        document.getElementById('weekNumber').textContent = `Week ${weekNumber}`;
-        const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        document.getElementById('weekDates').textContent = `${startDate} - ${endDate}`;
+        const weekNumberElement = document.getElementById(`${weekType}WeekNumber`);
+        const weekDatesElement = document.getElementById(`${weekType}WeekDates`);
+        
+        if (weekNumberElement && weekDatesElement) {
+            weekNumberElement.textContent = `Week ${weekNumber}`;
+            const startDate = dates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const endDate = dates[dates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            weekDatesElement.textContent = `${startDate} - ${endDate}`;
+        }
 
         // Render days
-        const weekDaysContainer = document.getElementById('weekDays');
+        const weekDaysContainer = document.getElementById(`${weekType}WeekDays`);
+        if (!weekDaysContainer) return;
+        
         weekDaysContainer.innerHTML = '';
 
         const today = this.formatDate(new Date());
-        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
         dates.forEach((date, index) => {
             const dateStr = this.formatDate(date);
