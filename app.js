@@ -1186,7 +1186,6 @@ class OPSPlanning {
         document.getElementById('taskEndTime').value = '';
         document.getElementById('taskNote').value = '';
     }
-    }
 
     // Event Listeners
     setupEventListeners() {
