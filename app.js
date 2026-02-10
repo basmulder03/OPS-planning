@@ -1300,7 +1300,7 @@ class OPSPlanning {
             url.searchParams.set('viewMode', 'true'); // Default to read-only mode for shared URLs
             
             navigator.clipboard.writeText(url.toString()).then(() => {
-                alert('OPS Planning Schedule URL copied to clipboard! Recipients will open it in read-only view mode. Share this link with others.');
+                alert('OPS Planning Schedule URL copied to clipboard! Recipients will open in read-only mode.');
             }).catch(err => {
                 alert('Failed to copy URL. Please copy it manually from the address bar.');
             });
