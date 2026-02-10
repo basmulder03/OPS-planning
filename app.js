@@ -2,12 +2,13 @@
 
 class OPSPlanning {
     constructor() {
-        this.pattern = [];
+        this.patternHistory = []; // Array of {effectiveDate: 'YYYY-MM-DD', pattern: [names]}
         this.dailyTasks = {}; // Unified: tasks and assignments for specific days
         this.currentViewDate = new Date();
         this.draggedElement = null;
         this.draggedIndex = null;
         this.viewMode = false; // Dashboard view mode
+        this.editingTaskId = null; // Track which task is being edited
         
         this.init();
     }
@@ -83,9 +84,20 @@ class OPSPlanning {
         if (storedData) {
             try {
                 const data = JSON.parse(storedData);
-                this.pattern = data.pattern || [];
-                // Migrate old data format if needed
+                
+                // Load pattern history (new format) or migrate from old pattern
+                if (data.patternHistory && Array.isArray(data.patternHistory)) {
+                    this.patternHistory = data.patternHistory;
+                } else if (data.pattern && Array.isArray(data.pattern)) {
+                    // Migrate old pattern to pattern history with today's date
+                    this.patternHistory = [{
+                        effectiveDate: this.formatDate(new Date()),
+                        pattern: data.pattern
+                    }];
+                }
+                
                 this.dailyTasks = data.dailyTasks || {};
+                
                 // Migrate old specificAssignments to dailyTasks format
                 if (data.specificAssignments) {
                     Object.keys(data.specificAssignments).forEach(dateStr => {
@@ -93,7 +105,6 @@ class OPSPlanning {
                         if (!this.dailyTasks[dateStr]) {
                             this.dailyTasks[dateStr] = [];
                         }
-                        // Check if this assignment already exists
                         const exists = this.dailyTasks[dateStr].some(task => 
                             task.description === assignment.person && task.isAssignment
                         );
@@ -105,7 +116,7 @@ class OPSPlanning {
                                 note: assignment.note || '',
                                 startTime: '',
                                 endTime: '',
-                                isAssignment: true // Flag for backward compatibility
+                                isAssignment: true
                             });
                         }
                     });
@@ -118,7 +129,7 @@ class OPSPlanning {
 
     saveToStorage() {
         const data = {
-            pattern: this.pattern,
+            patternHistory: this.patternHistory,
             dailyTasks: this.dailyTasks
         };
         localStorage.setItem('opsPlanning', JSON.stringify(data));
@@ -131,8 +142,19 @@ class OPSPlanning {
         if (dataParam) {
             try {
                 const data = JSON.parse(atob(dataParam));
-                this.pattern = data.pattern || this.pattern;
+                
+                // Load pattern history or migrate from old pattern
+                if (data.patternHistory && Array.isArray(data.patternHistory)) {
+                    this.patternHistory = data.patternHistory;
+                } else if (data.pattern && Array.isArray(data.pattern)) {
+                    this.patternHistory = [{
+                        effectiveDate: this.formatDate(new Date()),
+                        pattern: data.pattern
+                    }];
+                }
+                
                 this.dailyTasks = data.dailyTasks || this.dailyTasks;
+                
                 // Migrate old specificAssignments if present
                 if (data.specificAssignments) {
                     Object.keys(data.specificAssignments).forEach(dateStr => {
@@ -165,7 +187,7 @@ class OPSPlanning {
 
     updateURL() {
         const data = {
-            pattern: this.pattern,
+            patternHistory: this.patternHistory,
             dailyTasks: this.dailyTasks
         };
         const encoded = btoa(JSON.stringify(data));
@@ -175,26 +197,82 @@ class OPSPlanning {
     }
 
     // Pattern Management
+    getCurrentPattern() {
+        if (this.patternHistory.length === 0) {
+            return [];
+        }
+        // Return the most recent pattern
+        return this.patternHistory[this.patternHistory.length - 1].pattern;
+    }
+
+    getPatternForDate(date) {
+        if (this.patternHistory.length === 0) {
+            return [];
+        }
+        
+        const dateStr = this.formatDate(date);
+        
+        // Find the most recent pattern that is effective on or before this date
+        let effectivePattern = this.patternHistory[0].pattern;
+        for (let i = 0; i < this.patternHistory.length; i++) {
+            if (this.patternHistory[i].effectiveDate <= dateStr) {
+                effectivePattern = this.patternHistory[i].pattern;
+            } else {
+                break;
+            }
+        }
+        
+        return effectivePattern;
+    }
+
     addPerson(name) {
         if (!name || name.trim() === '') return;
-        this.pattern.push(name.trim());
+        const currentPattern = this.getCurrentPattern();
+        const updatedPattern = [...currentPattern, name.trim()];
+        
+        // Add a new pattern entry with today's date
+        const today = this.formatDate(new Date());
+        this.patternHistory.push({
+            effectiveDate: today,
+            pattern: updatedPattern
+        });
+        
         this.saveToStorage();
         this.renderPattern();
         this.renderWeek();
     }
 
     removePerson(index) {
-        this.pattern.splice(index, 1);
+        const currentPattern = this.getCurrentPattern();
+        const updatedPattern = currentPattern.filter((_, i) => i !== index);
+        
+        // Add a new pattern entry with today's date
+        const today = this.formatDate(new Date());
+        this.patternHistory.push({
+            effectiveDate: today,
+            pattern: updatedPattern
+        });
+        
         this.saveToStorage();
         this.renderPattern();
         this.renderWeek();
     }
 
     swapPersons(index1, index2) {
-        if (index1 < 0 || index2 < 0 || index1 >= this.pattern.length || index2 >= this.pattern.length) {
+        const currentPattern = this.getCurrentPattern();
+        if (index1 < 0 || index2 < 0 || index1 >= currentPattern.length || index2 >= currentPattern.length) {
             return;
         }
-        [this.pattern[index1], this.pattern[index2]] = [this.pattern[index2], this.pattern[index1]];
+        const updatedPattern = [...currentPattern];
+        [updatedPattern[index1], updatedPattern[index2]] = [updatedPattern[index2], updatedPattern[index1]];
+        
+        // Add a new pattern entry with today's date
+        const today = this.formatDate(new Date());
+        this.patternHistory.push({
+            effectiveDate: today,
+            pattern: updatedPattern
+        });
+        
         this.saveToStorage();
         this.renderPattern();
         this.renderWeek();
@@ -202,14 +280,22 @@ class OPSPlanning {
 
     movePersonTo(fromIndex, toIndex) {
         if (fromIndex === toIndex) return;
-        const person = this.pattern.splice(fromIndex, 1)[0];
-        this.pattern.splice(toIndex, 0, person);
+        const currentPattern = this.getCurrentPattern();
+        const updatedPattern = [...currentPattern];
+        const person = updatedPattern.splice(fromIndex, 1)[0];
+        updatedPattern.splice(toIndex, 0, person);
+        
+        // Add a new pattern entry with today's date
+        const today = this.formatDate(new Date());
+        this.patternHistory.push({
+            effectiveDate: today,
+            pattern: updatedPattern
+        });
+        
         this.saveToStorage();
         this.renderPattern();
         this.renderWeek();
     }
-
-    // Specific Assignments - REMOVED, now part of dailyTasks
 
     // Daily Tasks Management
     addTask(date, taskDescription, assignee = '', startTime = '', endTime = '', note = '') {
@@ -220,7 +306,7 @@ class OPSPlanning {
         this.dailyTasks[dateStr].push({
             id: Date.now() + '-' + Math.random(),
             description: taskDescription.trim(),
-            assignee: assignee.trim(),
+            assignee: assignee.trim(), // Can be comma-separated for multiple people
             startTime: startTime.trim(),
             endTime: endTime.trim(),
             note: note.trim()
@@ -228,6 +314,25 @@ class OPSPlanning {
         this.saveToStorage();
         this.renderTasks();
         this.renderWeek();
+    }
+
+    updateTask(dateStr, taskId, taskDescription, assignee = '', startTime = '', endTime = '', note = '') {
+        if (this.dailyTasks[dateStr]) {
+            const taskIndex = this.dailyTasks[dateStr].findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                this.dailyTasks[dateStr][taskIndex] = {
+                    id: taskId,
+                    description: taskDescription.trim(),
+                    assignee: assignee.trim(),
+                    startTime: startTime.trim(),
+                    endTime: endTime.trim(),
+                    note: note.trim()
+                };
+                this.saveToStorage();
+                this.renderTasks();
+                this.renderWeek();
+            }
+        }
     }
 
     removeTask(dateStr, taskId) {
@@ -244,6 +349,89 @@ class OPSPlanning {
 
     getTasksForDate(dateStr) {
         return this.dailyTasks[dateStr] || [];
+    }
+
+    // Get unique task descriptions for autocomplete
+    getUniqueDescriptions() {
+        const descriptions = new Set();
+        Object.values(this.dailyTasks).forEach(tasks => {
+            tasks.forEach(task => {
+                if (task.description) {
+                    descriptions.add(task.description);
+                }
+            });
+        });
+        return Array.from(descriptions).sort();
+    }
+
+    // Get unique assignees for autocomplete
+    getUniqueAssignees() {
+        const assignees = new Set();
+        
+        // Add people from pattern history
+        this.patternHistory.forEach(entry => {
+            entry.pattern.forEach(person => assignees.add(person));
+        });
+        
+        // Add assignees from tasks
+        Object.values(this.dailyTasks).forEach(tasks => {
+            tasks.forEach(task => {
+                if (task.assignee) {
+                    // Split by comma in case of multiple assignees
+                    task.assignee.split(',').forEach(name => {
+                        const trimmed = name.trim();
+                        if (trimmed) assignees.add(trimmed);
+                    });
+                }
+            });
+        });
+        
+        return Array.from(assignees).sort();
+    }
+
+    // Get time suggestions based on task description
+    getTimeSuggestionsForTask(description) {
+        const suggestions = {
+            startTime: '',
+            endTime: ''
+        };
+        
+        let matchCount = 0;
+        let totalStartMinutes = 0;
+        let totalEndMinutes = 0;
+        
+        Object.values(this.dailyTasks).forEach(tasks => {
+            tasks.forEach(task => {
+                if (task.description === description && (task.startTime || task.endTime)) {
+                    matchCount++;
+                    if (task.startTime) {
+                        const [hours, minutes] = task.startTime.split(':').map(Number);
+                        totalStartMinutes += hours * 60 + minutes;
+                    }
+                    if (task.endTime) {
+                        const [hours, minutes] = task.endTime.split(':').map(Number);
+                        totalEndMinutes += hours * 60 + minutes;
+                    }
+                }
+            });
+        });
+        
+        if (matchCount > 0) {
+            if (totalStartMinutes > 0) {
+                const avgMinutes = Math.round(totalStartMinutes / matchCount);
+                const hours = Math.floor(avgMinutes / 60);
+                const minutes = avgMinutes % 60;
+                suggestions.startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+            if (totalEndMinutes > 0) {
+                const avgMinutes = Math.round(totalEndMinutes / matchCount);
+                const hours = Math.floor(avgMinutes / 60);
+                const minutes = avgMinutes % 60;
+                suggestions.endTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+        }
+        
+        return suggestions;
     }
 
     // Date Utilities
@@ -289,8 +477,9 @@ class OPSPlanning {
             return { person: assignment.assignee || assignment.description, note: assignment.note || '' };
         }
 
-        // Use pattern
-        if (this.pattern.length === 0) {
+        // Use pattern for this date
+        const pattern = this.getPatternForDate(date);
+        if (pattern.length === 0) {
             return { person: 'No pattern set', note: '' };
         }
 
@@ -298,9 +487,11 @@ class OPSPlanning {
         const epoch = new Date('2024-01-01');
         const daysSinceEpoch = Math.floor((date - epoch) / (1000 * 60 * 60 * 24));
         const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
-        const personIndex = weeksSinceEpoch % this.pattern.length;
+        const personIndex = weeksSinceEpoch % pattern.length;
         
-        return { person: this.pattern[personIndex], note: '' };
+        // Support multiple people (comma-separated)
+        const people = pattern[personIndex];
+        return { person: people, note: '' };
     }
 
     // Rendering
@@ -403,15 +594,16 @@ class OPSPlanning {
 
     renderPattern() {
         const patternList = document.getElementById('patternList');
+        const currentPattern = this.getCurrentPattern();
         
-        if (this.pattern.length === 0) {
+        if (currentPattern.length === 0) {
             patternList.innerHTML = '<div class="empty-state"><p>No people in the pattern. Add someone to get started!</p></div>';
             return;
         }
 
         patternList.innerHTML = '';
         
-        this.pattern.forEach((person, index) => {
+        currentPattern.forEach((person, index) => {
             const item = document.createElement('div');
             item.className = 'pattern-item';
             item.draggable = true;
@@ -425,7 +617,7 @@ class OPSPlanning {
                 </div>
                 <div class="pattern-item-actions">
                     ${index > 0 ? `<button class="btn btn-small btn-secondary move-up-btn" data-index="${index}">↑</button>` : ''}
-                    ${index < this.pattern.length - 1 ? `<button class="btn btn-small btn-secondary move-down-btn" data-index="${index}">↓</button>` : ''}
+                    ${index < currentPattern.length - 1 ? `<button class="btn btn-small btn-secondary move-down-btn" data-index="${index}">↓</button>` : ''}
                     <button class="btn btn-small btn-danger remove-btn" data-index="${index}">Remove</button>
                 </div>
             `;
@@ -459,7 +651,7 @@ class OPSPlanning {
         patternList.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.target.dataset.index);
-                if (confirm(`Remove ${this.pattern[index]} from the pattern?`)) {
+                if (confirm(`Remove ${currentPattern[index]} from the pattern?`)) {
                     this.removePerson(index);
                 }
             });
@@ -537,23 +729,80 @@ class OPSPlanning {
                         ${statusLabel}
                         ${displayParts.join('')}
                     </div>
-                    <button class="btn btn-small btn-danger" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
+                    <div class="task-item-actions">
+                        <button class="btn btn-small btn-secondary edit-task-btn" data-date="${dateStr}" data-task-id="${task.id}">Edit</button>
+                        <button class="btn btn-small btn-danger remove-task-btn" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
+                    </div>
                 `;
 
                 tasksList.appendChild(item);
             });
         });
 
-        // Add event listeners
-        tasksList.querySelectorAll('.btn-danger').forEach(btn => {
+        // Add event listeners for edit buttons
+        tasksList.querySelectorAll('.edit-task-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const dateStr = e.target.dataset.date;
-                const taskId = parseInt(e.target.dataset.taskId);
+                const taskId = e.target.dataset.taskId;
+                this.editTask(dateStr, taskId);
+            });
+        });
+
+        // Add event listeners for remove buttons
+        tasksList.querySelectorAll('.remove-task-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const dateStr = e.target.dataset.date;
+                const taskId = e.target.dataset.taskId;
                 if (confirm('Remove this task?')) {
                     this.removeTask(dateStr, taskId);
                 }
             });
         });
+    }
+
+    editTask(dateStr, taskId) {
+        const tasks = this.dailyTasks[dateStr];
+        if (!tasks) return;
+        
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        // Populate form fields
+        document.getElementById('taskDate').value = dateStr;
+        document.getElementById('taskDescription').value = task.description;
+        document.getElementById('taskAssignee').value = task.assignee || '';
+        document.getElementById('taskStartTime').value = task.startTime || '';
+        document.getElementById('taskEndTime').value = task.endTime || '';
+        document.getElementById('taskNote').value = task.note || '';
+        
+        // Store the task being edited
+        this.editingTaskId = taskId;
+        this.editingTaskDate = dateStr;
+        
+        // Update button text
+        const addBtn = document.getElementById('addTaskBtn');
+        addBtn.textContent = 'Update Task';
+        addBtn.classList.add('btn-warning');
+        
+        // Scroll to form
+        document.querySelector('.tasks-assignments').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    cancelEdit() {
+        this.editingTaskId = null;
+        this.editingTaskDate = null;
+        
+        const addBtn = document.getElementById('addTaskBtn');
+        addBtn.textContent = 'Add Task';
+        addBtn.classList.remove('btn-warning');
+        
+        // Clear form
+        document.getElementById('taskDate').value = '';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskAssignee').value = '';
+        document.getElementById('taskStartTime').value = '';
+        document.getElementById('taskEndTime').value = '';
+        document.getElementById('taskNote').value = '';
     }
 
     // Event Listeners
@@ -598,14 +847,28 @@ class OPSPlanning {
             const noteInput = document.getElementById('taskNote');
 
             if (dateInput.value && descriptionInput.value) {
-                this.addTask(
-                    dateInput.value, 
-                    descriptionInput.value,
-                    assigneeInput?.value || '',
-                    startTimeInput?.value || '',
-                    endTimeInput?.value || '',
-                    noteInput?.value || ''
-                );
+                // Check if we're editing or adding
+                if (this.editingTaskId) {
+                    this.updateTask(
+                        this.editingTaskDate,
+                        this.editingTaskId,
+                        descriptionInput.value,
+                        assigneeInput?.value || '',
+                        startTimeInput?.value || '',
+                        endTimeInput?.value || '',
+                        noteInput?.value || ''
+                    );
+                    this.cancelEdit();
+                } else {
+                    this.addTask(
+                        dateInput.value, 
+                        descriptionInput.value,
+                        assigneeInput?.value || '',
+                        startTimeInput?.value || '',
+                        endTimeInput?.value || '',
+                        noteInput?.value || ''
+                    );
+                }
                 dateInput.value = '';
                 descriptionInput.value = '';
                 assigneeInput && (assigneeInput.value = '');
@@ -616,6 +879,29 @@ class OPSPlanning {
                 alert('Please enter both date and description');
             }
         });
+
+        // Auto-fill times based on task description
+        document.getElementById('taskDescription').addEventListener('change', (e) => {
+            if (!this.editingTaskId) { // Only auto-fill when adding new tasks
+                const description = e.target.value.trim();
+                if (description) {
+                    const suggestions = this.getTimeSuggestionsForTask(description);
+                    const startTimeInput = document.getElementById('taskStartTime');
+                    const endTimeInput = document.getElementById('taskEndTime');
+                    
+                    if (suggestions.startTime && !startTimeInput.value) {
+                        startTimeInput.value = suggestions.startTime;
+                    }
+                    if (suggestions.endTime && !endTimeInput.value) {
+                        endTimeInput.value = suggestions.endTime;
+                    }
+                }
+            }
+        });
+
+        // Setup autocomplete datalists
+        this.setupAutocomplete();
+
 
         // Share functionality
         document.getElementById('shareBtn').addEventListener('click', () => {
@@ -635,7 +921,7 @@ class OPSPlanning {
         // Export data
         document.getElementById('exportBtn').addEventListener('click', () => {
             const data = {
-                pattern: this.pattern,
+                patternHistory: this.patternHistory,
                 dailyTasks: this.dailyTasks
             };
             const dataStr = JSON.stringify(data, null, 2);
@@ -661,8 +947,18 @@ class OPSPlanning {
                     try {
                         const data = JSON.parse(event.target.result);
                         if (confirm('This will replace your current data. Continue?')) {
-                            this.pattern = data.pattern || [];
+                            // Load pattern history or migrate
+                            if (data.patternHistory && Array.isArray(data.patternHistory)) {
+                                this.patternHistory = data.patternHistory;
+                            } else if (data.pattern && Array.isArray(data.pattern)) {
+                                this.patternHistory = [{
+                                    effectiveDate: this.formatDate(new Date()),
+                                    pattern: data.pattern
+                                }];
+                            }
+                            
                             this.dailyTasks = data.dailyTasks || {};
+                            
                             // Migrate old format if present
                             if (data.specificAssignments) {
                                 Object.keys(data.specificAssignments).forEach(dateStr => {
@@ -683,6 +979,7 @@ class OPSPlanning {
                             }
                             this.saveToStorage();
                             this.renderAll();
+                            this.setupAutocomplete(); // Refresh autocomplete after import
                             alert('Data imported successfully!');
                         }
                     } catch (err) {
@@ -691,6 +988,51 @@ class OPSPlanning {
                 };
                 reader.readAsText(file);
             }
+        });
+    }
+
+    setupAutocomplete() {
+        // Get or create datalist elements
+        let descriptionDatalist = document.getElementById('taskDescriptionList');
+        if (!descriptionDatalist) {
+            descriptionDatalist = document.createElement('datalist');
+            descriptionDatalist.id = 'taskDescriptionList';
+            document.body.appendChild(descriptionDatalist);
+        }
+        
+        let assigneeDatalist = document.getElementById('taskAssigneeList');
+        if (!assigneeDatalist) {
+            assigneeDatalist = document.createElement('datalist');
+            assigneeDatalist.id = 'taskAssigneeList';
+            document.body.appendChild(assigneeDatalist);
+        }
+        
+        // Link inputs to datalists
+        const descriptionInput = document.getElementById('taskDescription');
+        const assigneeInput = document.getElementById('taskAssignee');
+        
+        if (descriptionInput) {
+            descriptionInput.setAttribute('list', 'taskDescriptionList');
+        }
+        if (assigneeInput) {
+            assigneeInput.setAttribute('list', 'taskAssigneeList');
+        }
+        
+        // Populate datalists
+        const descriptions = this.getUniqueDescriptions();
+        descriptionDatalist.innerHTML = '';
+        descriptions.forEach(desc => {
+            const option = document.createElement('option');
+            option.value = desc;
+            descriptionDatalist.appendChild(option);
+        });
+        
+        const assignees = this.getUniqueAssignees();
+        assigneeDatalist.innerHTML = '';
+        assignees.forEach(assignee => {
+            const option = document.createElement('option');
+            option.value = assignee;
+            assigneeDatalist.appendChild(option);
         });
     }
 }
