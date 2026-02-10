@@ -3,8 +3,7 @@
 class OPSPlanning {
     constructor() {
         this.pattern = [];
-        this.specificAssignments = {};
-        this.dailyTasks = {}; // New: tasks for specific days
+        this.dailyTasks = {}; // Unified: tasks and assignments for specific days
         this.currentViewDate = new Date();
         this.draggedElement = null;
         this.draggedIndex = null;
@@ -31,8 +30,7 @@ class OPSPlanning {
         if (this.viewMode) {
             // Hide editing sections in view mode
             document.querySelector('.pattern-section')?.classList.add('hidden');
-            document.querySelector('.specific-assignments')?.classList.add('hidden');
-            document.querySelector('.daily-tasks')?.classList.add('hidden');
+            document.querySelector('.tasks-assignments')?.classList.add('hidden');
             document.querySelector('.share-section')?.classList.add('hidden');
             // Optionally adjust the header
             const subtitle = document.querySelector('.subtitle');
@@ -42,8 +40,7 @@ class OPSPlanning {
         } else {
             // Ensure sections are visible in normal mode
             document.querySelector('.pattern-section')?.classList.remove('hidden');
-            document.querySelector('.specific-assignments')?.classList.remove('hidden');
-            document.querySelector('.daily-tasks')?.classList.remove('hidden');
+            document.querySelector('.tasks-assignments')?.classList.remove('hidden');
             document.querySelector('.share-section')?.classList.remove('hidden');
             // Restore original subtitle
             const subtitle = document.querySelector('.subtitle');
@@ -87,8 +84,32 @@ class OPSPlanning {
             try {
                 const data = JSON.parse(storedData);
                 this.pattern = data.pattern || [];
-                this.specificAssignments = data.specificAssignments || {};
+                // Migrate old data format if needed
                 this.dailyTasks = data.dailyTasks || {};
+                // Migrate old specificAssignments to dailyTasks format
+                if (data.specificAssignments) {
+                    Object.keys(data.specificAssignments).forEach(dateStr => {
+                        const assignment = data.specificAssignments[dateStr];
+                        if (!this.dailyTasks[dateStr]) {
+                            this.dailyTasks[dateStr] = [];
+                        }
+                        // Check if this assignment already exists
+                        const exists = this.dailyTasks[dateStr].some(task => 
+                            task.description === assignment.person && task.isAssignment
+                        );
+                        if (!exists) {
+                            this.dailyTasks[dateStr].push({
+                                id: Date.now() + '-' + Math.random(),
+                                description: assignment.person,
+                                assignee: assignment.person,
+                                note: assignment.note || '',
+                                startTime: '',
+                                endTime: '',
+                                isAssignment: true // Flag for backward compatibility
+                            });
+                        }
+                    });
+                }
             } catch (e) {
                 console.error('Error loading data:', e);
             }
@@ -98,7 +119,6 @@ class OPSPlanning {
     saveToStorage() {
         const data = {
             pattern: this.pattern,
-            specificAssignments: this.specificAssignments,
             dailyTasks: this.dailyTasks
         };
         localStorage.setItem('opsPlanning', JSON.stringify(data));
@@ -112,8 +132,30 @@ class OPSPlanning {
             try {
                 const data = JSON.parse(atob(dataParam));
                 this.pattern = data.pattern || this.pattern;
-                this.specificAssignments = data.specificAssignments || this.specificAssignments;
                 this.dailyTasks = data.dailyTasks || this.dailyTasks;
+                // Migrate old specificAssignments if present
+                if (data.specificAssignments) {
+                    Object.keys(data.specificAssignments).forEach(dateStr => {
+                        const assignment = data.specificAssignments[dateStr];
+                        if (!this.dailyTasks[dateStr]) {
+                            this.dailyTasks[dateStr] = [];
+                        }
+                        const exists = this.dailyTasks[dateStr].some(task => 
+                            task.description === assignment.person && task.isAssignment
+                        );
+                        if (!exists) {
+                            this.dailyTasks[dateStr].push({
+                                id: Date.now() + '-' + Math.random(),
+                                description: assignment.person,
+                                assignee: assignment.person,
+                                note: assignment.note || '',
+                                startTime: '',
+                                endTime: '',
+                                isAssignment: true
+                            });
+                        }
+                    });
+                }
                 this.saveToStorage();
             } catch (e) {
                 console.error('Error loading from URL:', e);
@@ -124,7 +166,6 @@ class OPSPlanning {
     updateURL() {
         const data = {
             pattern: this.pattern,
-            specificAssignments: this.specificAssignments,
             dailyTasks: this.dailyTasks
         };
         const encoded = btoa(JSON.stringify(data));
@@ -168,37 +209,21 @@ class OPSPlanning {
         this.renderWeek();
     }
 
-    // Specific Assignments
-    addAssignment(date, person, note = '') {
-        const dateStr = this.formatDate(date);
-        this.specificAssignments[dateStr] = {
-            person: person.trim(),
-            note: note.trim()
-        };
-        this.saveToStorage();
-        this.renderAssignments();
-        this.renderWeek();
-    }
-
-    removeAssignment(dateStr) {
-        delete this.specificAssignments[dateStr];
-        this.saveToStorage();
-        this.renderAssignments();
-        this.renderWeek();
-    }
+    // Specific Assignments - REMOVED, now part of dailyTasks
 
     // Daily Tasks Management
-    addTask(date, taskDescription, startTime = '', minEndTime = '', maxEndTime = '') {
+    addTask(date, taskDescription, assignee = '', startTime = '', endTime = '', note = '') {
         const dateStr = this.formatDate(date);
         if (!this.dailyTasks[dateStr]) {
             this.dailyTasks[dateStr] = [];
         }
         this.dailyTasks[dateStr].push({
-            id: Date.now(),
+            id: Date.now() + '-' + Math.random(),
             description: taskDescription.trim(),
+            assignee: assignee.trim(),
             startTime: startTime.trim(),
-            minEndTime: minEndTime.trim(),
-            maxEndTime: maxEndTime.trim()
+            endTime: endTime.trim(),
+            note: note.trim()
         });
         this.saveToStorage();
         this.renderTasks();
@@ -257,9 +282,11 @@ class OPSPlanning {
     getPersonForDate(date) {
         const dateStr = this.formatDate(date);
         
-        // Check for specific assignment
-        if (this.specificAssignments[dateStr]) {
-            return this.specificAssignments[dateStr];
+        // Check for tasks marked as assignments (for backward compatibility)
+        const tasks = this.getTasksForDate(dateStr);
+        const assignment = tasks.find(task => task.isAssignment);
+        if (assignment) {
+            return { person: assignment.assignee || assignment.description, note: assignment.note || '' };
         }
 
         // Use pattern
@@ -280,18 +307,13 @@ class OPSPlanning {
     renderAll() {
         this.renderWeek();
         this.renderPattern();
-        this.renderAssignments();
         this.renderTasks();
     }
 
     hasWeekendActivity(dates) {
-        // Check if Saturday (index 5) or Sunday (index 6) have specific assignments or tasks
+        // Check if Saturday (index 5) or Sunday (index 6) have tasks
         for (let i = 5; i <= 6; i++) {
             const dateStr = this.formatDate(dates[i]);
-            // Check for specific assignments
-            if (this.specificAssignments[dateStr]) {
-                return true;
-            }
             // Check for tasks
             if (this.dailyTasks[dateStr] && this.dailyTasks[dateStr].length > 0) {
                 return true;
@@ -339,15 +361,30 @@ class OPSPlanning {
             if (tasks.length > 0) {
                 tasksHtml = '<div class="day-tasks">';
                 tasks.forEach(task => {
-                    let timeInfo = '';
-                    if (task.startTime || task.minEndTime || task.maxEndTime) {
+                    // Skip tasks marked as assignments (already shown as main person)
+                    if (task.isAssignment) return;
+                    
+                    let taskInfo = task.description;
+                    
+                    // Add assignee if present
+                    if (task.assignee) {
+                        taskInfo += ` (${task.assignee})`;
+                    }
+                    
+                    // Add time info if present
+                    if (task.startTime || task.endTime) {
                         const timeParts = [];
                         if (task.startTime) timeParts.push(task.startTime);
-                        if (task.minEndTime) timeParts.push(`min:${task.minEndTime}`);
-                        if (task.maxEndTime) timeParts.push(`max:${task.maxEndTime}`);
-                        timeInfo = ` (${timeParts.join(' ')})`;
+                        if (task.endTime) timeParts.push(task.endTime);
+                        taskInfo += ` ${timeParts.join('-')}`;
                     }
-                    tasksHtml += `<div class="day-task">📌 ${task.description}${timeInfo}</div>`;
+                    
+                    // Add note if present
+                    if (task.note) {
+                        taskInfo += ` - ${task.note}`;
+                    }
+                    
+                    tasksHtml += `<div class="day-task">📌 ${taskInfo}</div>`;
                 });
                 tasksHtml += '</div>';
             }
@@ -443,55 +480,13 @@ class OPSPlanning {
         });
     }
 
-    renderAssignments() {
-        const assignmentsList = document.getElementById('assignmentsList');
-        
-        const sortedDates = Object.keys(this.specificAssignments).sort();
-        
-        if (sortedDates.length === 0) {
-            assignmentsList.innerHTML = '<div class="empty-state"><p>No specific assignments. Add one to override the pattern for a specific day.</p></div>';
-            return;
-        }
-
-        assignmentsList.innerHTML = '';
-
-        sortedDates.forEach(dateStr => {
-            const assignment = this.specificAssignments[dateStr];
-            const date = new Date(dateStr + 'T00:00:00');
-            
-            const item = document.createElement('div');
-            item.className = 'assignment-item';
-
-            item.innerHTML = `
-                <div class="assignment-item-info">
-                    <span class="assignment-date">${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    <span class="assignment-person">${assignment.person}</span>
-                    ${assignment.note ? `<span class="assignment-note">${assignment.note}</span>` : ''}
-                </div>
-                <button class="btn btn-small btn-danger" data-date="${dateStr}">Remove</button>
-            `;
-
-            assignmentsList.appendChild(item);
-        });
-
-        // Add event listeners
-        assignmentsList.querySelectorAll('.btn-danger').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const dateStr = e.target.dataset.date;
-                if (confirm('Remove this specific assignment?')) {
-                    this.removeAssignment(dateStr);
-                }
-            });
-        });
-    }
-
     renderTasks() {
         const tasksList = document.getElementById('tasksList');
         
         const sortedDates = Object.keys(this.dailyTasks).sort();
         
         if (sortedDates.length === 0) {
-            tasksList.innerHTML = '<div class="empty-state"><p>No extra tasks set. Add tasks for specific days.</p></div>';
+            tasksList.innerHTML = '<div class="empty-state"><p>No tasks or assignments set. Add one to get started.</p></div>';
             return;
         }
 
@@ -512,28 +507,35 @@ class OPSPlanning {
 
                 const statusLabel = isPast ? '<span class="task-status task-status-past">Past</span>' : '<span class="task-status task-status-upcoming">Upcoming</span>';
 
-                // Build time display
-                let timeDisplay = '';
-                if (task.startTime || task.minEndTime || task.maxEndTime) {
+                // Build display parts
+                let displayParts = [];
+                
+                // Description
+                displayParts.push(`<span class="task-description">📌 ${task.description}</span>`);
+                
+                // Assignee
+                if (task.assignee) {
+                    displayParts.push(`<span class="task-assignee">Assigned to: ${task.assignee}</span>`);
+                }
+                
+                // Time
+                if (task.startTime || task.endTime) {
                     const timeParts = [];
-                    if (task.startTime) {
-                        timeParts.push(`Start: ${task.startTime}`);
-                    }
-                    if (task.minEndTime) {
-                        timeParts.push(`Min end: ${task.minEndTime}`);
-                    }
-                    if (task.maxEndTime) {
-                        timeParts.push(`Max end: ${task.maxEndTime}`);
-                    }
-                    timeDisplay = `<span class="task-time">${timeParts.join(' • ')}</span>`;
+                    if (task.startTime) timeParts.push(`Start: ${task.startTime}`);
+                    if (task.endTime) timeParts.push(`End: ${task.endTime}`);
+                    displayParts.push(`<span class="task-time">${timeParts.join(' • ')}</span>`);
+                }
+                
+                // Note
+                if (task.note) {
+                    displayParts.push(`<span class="task-note">Note: ${task.note}</span>`);
                 }
 
                 item.innerHTML = `
                     <div class="task-item-info">
                         <span class="task-date">${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         ${statusLabel}
-                        <span class="task-description">📌 ${task.description}</span>
-                        ${timeDisplay}
+                        ${displayParts.join('')}
                     </div>
                     <button class="btn btn-small btn-danger" data-date="${dateStr}" data-task-id="${task.id}">Remove</button>
                 `;
@@ -586,45 +588,32 @@ class OPSPlanning {
             this.renderWeek();
         });
 
-        // Add specific assignment
-        document.getElementById('addAssignmentBtn').addEventListener('click', () => {
-            const dateInput = document.getElementById('assignmentDate');
-            const personInput = document.getElementById('assignmentPerson');
-            const noteInput = document.getElementById('assignmentNote');
-
-            if (dateInput.value && personInput.value) {
-                this.addAssignment(dateInput.value, personInput.value, noteInput.value);
-                dateInput.value = '';
-                personInput.value = '';
-                noteInput.value = '';
-            } else {
-                alert('Please enter both date and person name');
-            }
-        });
-
-        // Add daily task
+        // Add task/assignment
         document.getElementById('addTaskBtn').addEventListener('click', () => {
             const dateInput = document.getElementById('taskDate');
-            const taskInput = document.getElementById('taskDescription');
+            const descriptionInput = document.getElementById('taskDescription');
+            const assigneeInput = document.getElementById('taskAssignee');
             const startTimeInput = document.getElementById('taskStartTime');
-            const minEndTimeInput = document.getElementById('taskMinEndTime');
-            const maxEndTimeInput = document.getElementById('taskMaxEndTime');
+            const endTimeInput = document.getElementById('taskEndTime');
+            const noteInput = document.getElementById('taskNote');
 
-            if (dateInput.value && taskInput.value) {
+            if (dateInput.value && descriptionInput.value) {
                 this.addTask(
                     dateInput.value, 
-                    taskInput.value,
+                    descriptionInput.value,
+                    assigneeInput?.value || '',
                     startTimeInput?.value || '',
-                    minEndTimeInput?.value || '',
-                    maxEndTimeInput?.value || ''
+                    endTimeInput?.value || '',
+                    noteInput?.value || ''
                 );
                 dateInput.value = '';
-                taskInput.value = '';
+                descriptionInput.value = '';
+                assigneeInput && (assigneeInput.value = '');
                 startTimeInput && (startTimeInput.value = '');
-                minEndTimeInput && (minEndTimeInput.value = '');
-                maxEndTimeInput && (maxEndTimeInput.value = '');
+                endTimeInput && (endTimeInput.value = '');
+                noteInput && (noteInput.value = '');
             } else {
-                alert('Please enter both date and task description');
+                alert('Please enter both date and description');
             }
         });
 
@@ -647,7 +636,6 @@ class OPSPlanning {
         document.getElementById('exportBtn').addEventListener('click', () => {
             const data = {
                 pattern: this.pattern,
-                specificAssignments: this.specificAssignments,
                 dailyTasks: this.dailyTasks
             };
             const dataStr = JSON.stringify(data, null, 2);
@@ -674,8 +662,25 @@ class OPSPlanning {
                         const data = JSON.parse(event.target.result);
                         if (confirm('This will replace your current data. Continue?')) {
                             this.pattern = data.pattern || [];
-                            this.specificAssignments = data.specificAssignments || {};
                             this.dailyTasks = data.dailyTasks || {};
+                            // Migrate old format if present
+                            if (data.specificAssignments) {
+                                Object.keys(data.specificAssignments).forEach(dateStr => {
+                                    const assignment = data.specificAssignments[dateStr];
+                                    if (!this.dailyTasks[dateStr]) {
+                                        this.dailyTasks[dateStr] = [];
+                                    }
+                                    this.dailyTasks[dateStr].push({
+                                        id: Date.now() + '-' + Math.random(),
+                                        description: assignment.person,
+                                        assignee: assignment.person,
+                                        note: assignment.note || '',
+                                        startTime: '',
+                                        endTime: '',
+                                        isAssignment: true
+                                    });
+                                });
+                            }
                             this.saveToStorage();
                             this.renderAll();
                             alert('Data imported successfully!');

@@ -49,28 +49,22 @@
                 <div id="patternList" class="pattern-list"></div>
             </section>
 
-            <!-- Specific Day Assignments -->
-            <section class="specific-assignments">
-                <h2>Specific Day Assignments</h2>
-                <div class="assignment-controls">
-                    <input type="date" id="assignmentDate" />
-                    <input type="text" id="assignmentPerson" placeholder="Person name" />
-                    <input type="text" id="assignmentNote" placeholder="Note (optional)" />
-                    <button id="addAssignmentBtn" class="btn btn-primary">Add Assignment</button>
-                </div>
-                <div id="assignmentsList" class="assignments-list"></div>
-            </section>
-
-            <!-- Daily Tasks -->
-            <section class="daily-tasks">
-                <h2>Extra Tasks for Specific Days</h2>
+            <!-- Tasks & Assignments -->
+            <section class="tasks-assignments">
+                <h2>Tasks & Assignments</h2>
+                <p class="section-description">Add tasks or assignments for specific days. All fields except date and description are optional.</p>
                 <div class="task-controls">
-                    <input type="date" id="taskDate" />
-                    <input type="text" id="taskDescription" placeholder="Task description" />
-                    <input type="time" id="taskStartTime" placeholder="Start time (optional)" />
-                    <input type="time" id="taskMinEndTime" placeholder="Min end time (optional)" />
-                    <input type="time" id="taskMaxEndTime" placeholder="Max end time (optional)" />
+                    <input type="date" id="taskDate" placeholder="Date" title="Date for the task or assignment" />
+                    <input type="text" id="taskDescription" placeholder="Task or assignment description" title="Description of the task or who is assigned" />
+                    <input type="text" id="taskAssignee" placeholder="Assignee (optional)" title="Person assigned to this task" />
+                    <input type="time" id="taskStartTime" title="Start time for the task (optional)" />
+                    <input type="time" id="taskEndTime" title="End time for the task (optional)" />
+                    <input type="text" id="taskNote" placeholder="Note (optional)" title="Additional notes" />
                     <button id="addTaskBtn" class="btn btn-primary">Add Task</button>
+                </div>
+                <div class="time-labels">
+                    <span class="field-label">Start Time</span>
+                    <span class="field-label">End Time</span>
                 </div>
                 <div id="tasksList" class="tasks-list"></div>
             </section>
